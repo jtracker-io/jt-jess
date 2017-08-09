@@ -1,0 +1,228 @@
+swagger: '2.0'
+info:
+  title: JTHub Job Execution Service API
+  version: "0.1"
+consumes:
+  - application/json
+produces:
+  - application/json
+security:
+  # enable OAuth protection for all REST endpoints
+  # (only active if the TOKENINFO_URL environment variable is set)
+  - oauth2: [uid]
+paths:
+  /{account_name}/_job_queues/{workflow_name}/{workflow_version}:
+    get:
+      operationId: app.get_job_queues2
+      summary: Get all job queues for specified account, workflow_name and version
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - name: workflow_name
+          in: path
+          required: true
+          type: string
+          pattern: "^[a-zA-Z0-9-_]{3,30}$"
+        - name: workflow_version
+          in: path
+          required: true
+          type: string
+          pattern: "^[a-zA-Z0-9-_]{3,30}$"
+      responses:
+        200:
+          description: Return job queues for the specified account
+          schema:
+            type: array
+  /{account_name}/_job_queues/{workflow_author_account}/{workflow_name}/{workflow_version}:
+    get:
+      operationId: app.get_job_queues3
+      summary: Get all job queues for specified account, workflow_name and version
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - name: workflow_author_account
+          in: path
+          required: true
+          type: string
+          pattern: "^[a-zA-Z0-9-_]{3,30}$"
+        - name: workflow_name
+          in: path
+          required: true
+          type: string
+          pattern: "^[a-zA-Z0-9-_]{3,30}$"
+        - name: workflow_version
+          in: path
+          required: true
+          type: string
+          pattern: "^[a-zA-Z0-9-_.]{3,30}$"
+      responses:
+        200:
+          description: Return job queues for the specified account
+          schema:
+            type: array
+  /{account_name}/_job_queues:
+    get:
+      tags: [Job Queues]
+      operationId: app.get_job_queues1
+      summary: Get all job queues for an account
+      parameters:
+        - $ref: '#/parameters/account_name'
+      responses:
+        200:
+          description: Return job queues for the specified account
+          schema:
+            type: array
+    post:
+      tags: [Job Queues]
+      operationId: app.register_job_queue
+      summary: Register a job queue under a JTHub account
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - name: job_queue
+          in: body
+          schema:
+            $ref: '#/definitions/JobQueue'
+      responses:
+        200:
+          description: Workflow created
+          schema:
+            $ref: '#/definitions/JobQueue'
+        409:
+          description: Workflow registration failed
+  /{account_name}/_jobs/{job_queue_id}:
+    get:
+      tags: [Jobs]
+      operationId: app.get_jobs
+      summary: Get jobs in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+      responses:
+        200:
+          description: Return jobs
+    post:
+      tags: [Jobs]
+      operationId: app.enqueue_job
+      summary: Enqueue a job under a given job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: job_file
+          in: body
+          schema:
+            $ref: '#/definitions/JobFile'
+      responses:
+        200:
+          description: Job enqueued
+          schema:
+            $ref: '#/definitions/JobFile'
+        409:
+          description: Job enqueueing failed
+  /{account_name}/_jobs/{job_queue_id}/{job_id}:
+    get:
+      tags: [Jobs]
+      operationId: app.get_job
+      summary: Get jobs in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: job_id
+          in: path
+          type: string
+          required: true
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      responses:
+        200:
+          description: Return job
+
+
+parameters:
+  account_name:
+    name: account_name
+    description: Account's unique name
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9-_]{3,30}$"
+  workflow_name:
+    name: workflow_name
+    description: Workflow's name
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9-_]{3,30}$"
+  workflow_version:
+    name: workflow_version
+    description: Workflow's version
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9-_.]{3,30}$"
+  job_queue_id:
+    name: job_queue_id
+    description: Unique ID for a job queue
+    in: path
+    type: string
+    required: true
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+
+
+definitions:
+  JobQueue:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,30}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 30
+      workflow_type:
+        type: string
+        description: In which language workflow is written
+        enum: ["JTracker"]
+        example: "JTracker"
+        readOnly: true
+      tags:
+        type: object
+        description: Custom tags
+      created:
+        type: string
+        format: date-time
+        description: Creation time
+        example: "2015-07-07T15:49:51.230+02:00"
+        readOnly: true
+  JobFile:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
+
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://example.com/oauth2/dialog
+    scopes:
+      uid: Unique identifier of the user accessing the service.
