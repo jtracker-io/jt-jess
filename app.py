@@ -19,6 +19,30 @@ def enqueue_job(account_name):
     pass
 
 
+def get_workers(account_name, job_queue_id):
+    pass
+
+
+def get_worker(account_name, job_queue_id, worker_id):
+    pass
+
+
+def register_worker(account_name, job_queue_id):
+    pass
+
+
+def next_task(account_name, job_queue_id, worker):
+    pass
+
+
+def complete_task(account_name, job_queue_id, task_name):
+    pass
+
+
+def fail_task(account_name, job_queue_id, task_name):
+    pass
+
+
 def get_job_queues(account_name):
     try:
         workflows = jt_jes.get_workflows(account_name)

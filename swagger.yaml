@@ -11,7 +11,7 @@ security:
   # (only active if the TOKENINFO_URL environment variable is set)
   - oauth2: [uid]
 paths:
-  /{account_name}/_job_queues/{workflow_name}/{workflow_version}:
+  /job_queues/{account_name}/{workflow_name}/{workflow_version}:
     get:
       operationId: app.get_job_queues2
       summary: Get all job queues for specified account, workflow_name and version
@@ -32,13 +32,13 @@ paths:
           description: Return job queues for the specified account
           schema:
             type: array
-  /{account_name}/_job_queues/{workflow_author_account}/{workflow_name}/{workflow_version}:
+  /job_queues/{account_name}/{workflow_owner}/{workflow_name}/{workflow_version}:
     get:
       operationId: app.get_job_queues3
       summary: Get all job queues for specified account, workflow_name and version
       parameters:
         - $ref: '#/parameters/account_name'
-        - name: workflow_author_account
+        - name: workflow_owner
           in: path
           required: true
           type: string
@@ -58,7 +58,7 @@ paths:
           description: Return job queues for the specified account
           schema:
             type: array
-  /{account_name}/_job_queues:
+  /job_queues/{account_name}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues1
@@ -87,7 +87,7 @@ paths:
             $ref: '#/definitions/JobQueue'
         409:
           description: Workflow registration failed
-  /{account_name}/_jobs/{job_queue_id}:
+  /jobs/{account_name}/{job_queue_id}:
     get:
       tags: [Jobs]
       operationId: app.get_jobs
@@ -116,7 +116,7 @@ paths:
             $ref: '#/definitions/JobFile'
         409:
           description: Job enqueueing failed
-  /{account_name}/_jobs/{job_queue_id}/{job_id}:
+  /jobs/{account_name}/{job_queue_id}/{job_id}:
     get:
       tags: [Jobs]
       operationId: app.get_job
@@ -132,7 +132,96 @@ paths:
       responses:
         200:
           description: Return job
-
+  /workers/{account_name}/{job_queue_id}:
+    get:   # get list of workers for a given job queue
+      tags: [Workers]
+      operationId: app.get_workers
+      summary: Get workers registered in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+      responses:
+        200:
+          description: Return workers
+    post:  # register a worker for a given job queue
+      tags: [Workers]
+      operationId: app.register_worker
+      summary: Register a worker in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: worker
+          in: body
+          schema:
+            $ref: '#/definitions/Worker'
+      responses:
+        200:
+          description: Worker registered
+  /workers/{account_name}/{job_queue_id}/{worker_id}:
+    get: # get detail of a worker for a given job queue
+      tags: [Workers]
+      operationId: app.get_worker
+      summary: Get a worker registered in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/worker_id'
+      responses:
+        200:
+          description: Return worker
+  /tasks/{account_name}/{job_queue_id}/_next:
+    post: # worker ask for next task to run
+      tags: [Tasks]
+      operationId: app.next_task
+      summary: Get the next task to run
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: worker
+          in: body
+          schema:
+            $ref: '#/definitions/Worker'
+      responses:
+        204:
+          description: Task assigned
+        404:
+          description: No task to run
+  /tasks/{account_name}/{job_queue_id}/{task_name}/_complete:
+    post:
+      tags: [Tasks]
+      operationId: app.complete_task
+      summary: Worker reports completion of a task
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/task_name'
+        - name: worker
+          in: body
+          schema:
+            $ref: '#/definitions/Worker'
+      responses:
+        204:
+          description: Task assigned
+        404:
+          description: No task to run
+  /tasks/{account_name}/{job_queue_id}/{task_name}/_fail:
+    post:
+      tags: [Tasks]
+      operationId: app.fail_task
+      summary: Worker reports failure of a task
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/task_name'
+        - name: worker
+          in: body
+          schema:
+            $ref: '#/definitions/Worker'
+      responses:
+        204:
+          description: Task assigned
+        404:
+          description: No task to run
 
 parameters:
   account_name:
@@ -163,6 +252,20 @@ parameters:
     type: string
     required: true
     pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  worker_id:
+    name: worker_id
+    description: Unique ID for a worker
+    in: path
+    type: string
+    required: true
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  task_name:
+    name: task_name
+    description: Task's name
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9-_.]{2,256}$"
 
 
 definitions:
@@ -200,6 +303,24 @@ definitions:
         example: "2015-07-07T15:49:51.230+02:00"
         readOnly: true
   JobFile:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
+  Worker:
     type: object
     required:
       - _name
