@@ -11,60 +11,27 @@ security:
   # (only active if the TOKENINFO_URL environment variable is set)
   - oauth2: [uid]
 paths:
-  /job_queues/{account_name}/{workflow_name}/{workflow_version}:
-    get:
-      operationId: app.get_job_queues2
-      summary: Get all job queues for specified account, workflow_name and version
-      parameters:
-        - $ref: '#/parameters/account_name'
-        - name: workflow_name
-          in: path
-          required: true
-          type: string
-          pattern: "^[a-zA-Z0-9-_]{3,30}$"
-        - name: workflow_version
-          in: path
-          required: true
-          type: string
-          pattern: "^[a-zA-Z0-9-_]{3,30}$"
-      responses:
-        200:
-          description: Return job queues for the specified account
-          schema:
-            type: array
-  /job_queues/{account_name}/{workflow_owner}/{workflow_name}/{workflow_version}:
-    get:
-      operationId: app.get_job_queues3
-      summary: Get all job queues for specified account, workflow_name and version
-      parameters:
-        - $ref: '#/parameters/account_name'
-        - name: workflow_owner
-          in: path
-          required: true
-          type: string
-          pattern: "^[a-zA-Z0-9-_]{3,30}$"
-        - name: workflow_name
-          in: path
-          required: true
-          type: string
-          pattern: "^[a-zA-Z0-9-_]{3,30}$"
-        - name: workflow_version
-          in: path
-          required: true
-          type: string
-          pattern: "^[a-zA-Z0-9-_.]{3,30}$"
-      responses:
-        200:
-          description: Return job queues for the specified account
-          schema:
-            type: array
   /job_queues/{account_name}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues1
-      summary: Get all job queues for an account
+      summary: Get all job queues under a given account
       parameters:
         - $ref: '#/parameters/account_name'
+      responses:
+        200:
+          description: Return job queues for the specified account
+          schema:
+            type: array
+  /job_queues/{account_name}/{workflow_name}/{workflow_version}:
+    get:
+      tags: [Job Queues]
+      operationId: app.get_job_queues2
+      summary: Get all job queues for given account, workflow_name and version
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/workflow_name'
+        - $ref: '#/parameters/workflow_version'
       responses:
         200:
           description: Return job queues for the specified account
@@ -72,10 +39,12 @@ paths:
             type: array
     post:
       tags: [Job Queues]
-      operationId: app.register_job_queue
-      summary: Register a job queue under a JTHub account
+      operationId: app.register_job_queue1
+      summary: Register a job queue under a given account, workflow_name and version
       parameters:
         - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/workflow_name'
+        - $ref: '#/parameters/workflow_version'
         - name: job_queue
           in: body
           schema:
@@ -87,6 +56,57 @@ paths:
             $ref: '#/definitions/JobQueue'
         409:
           description: Workflow registration failed
+  /job_queues/{account_name}/{workflow_owner}/{workflow_name}/{workflow_version}:
+    get:
+      tags: [Job Queues]
+      operationId: app.get_job_queues
+      summary: Get all job queues for given account, workflow_owner, workflow_name and version
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/workflow_owner'
+        - $ref: '#/parameters/workflow_name'
+        - $ref: '#/parameters/workflow_version'
+      responses:
+        200:
+          description: Return job queues for the specified account
+          schema:
+            type: array
+    post:
+      tags: [Job Queues]
+      operationId: app.register_job_queue
+      summary: Register a job queue under a given account, workflow_owner, workflow_name and version
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/workflow_owner'
+        - $ref: '#/parameters/workflow_name'
+        - $ref: '#/parameters/workflow_version'
+        - name: job_queue
+          in: body
+          schema:
+            $ref: '#/definitions/JobQueue'
+      responses:
+        200:
+          description: Job queue registered
+          schema:
+            $ref: '#/definitions/JobQueue'
+        409:
+          description: Workflow registration failed
+  /job_queues/{account_name}/{job_queue_id}/action:
+    put:
+      tags: [Job Queues]
+      operationId: app.job_queue_action
+      summary: Perform an action on a job queue, eg, pause, resume
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: action
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/JobQueueAction'
+      responses:
+        204:
+          description: Action performed
   /jobs/{account_name}/{job_queue_id}:
     get:
       tags: [Jobs]
@@ -95,13 +115,17 @@ paths:
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
+        - name: state
+          type: string
+          in: query
+          enum: ['queued', 'running', 'completed', 'failed', 'paused']
       responses:
         200:
           description: Return jobs
     post:
       tags: [Jobs]
       operationId: app.enqueue_job
-      summary: Enqueue a job under a given job queue
+      summary: Enqueue a job in a given job queue
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
@@ -116,11 +140,26 @@ paths:
             $ref: '#/definitions/JobFile'
         409:
           description: Job enqueueing failed
+  /jobs/{account_name}/{job_queue_id}/summary:
+    get:
+      tags: [Jobs]
+      operationId: app.get_job_summary
+      summary: Get summary information on jobs in a job queue
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - name: state
+          type: string
+          in: query
+          enum: ['queued', 'running', 'completed', 'failed', 'paused']
+      responses:
+        200:
+          description: Return jobs
   /jobs/{account_name}/{job_queue_id}/{job_id}:
     get:
       tags: [Jobs]
       operationId: app.get_job
-      summary: Get jobs in a job queue
+      summary: Get detail for a given job
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
@@ -132,21 +171,38 @@ paths:
       responses:
         200:
           description: Return job
+  /jobs/{account_name}/{job_queue_id}/{job_id}/action:
+    put:
+      tags: [Jobs]
+      operationId: app.job_action
+      summary: Perform an action on a job, eg, pause, resume, cancel ...
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/job_id'
+        - name: action
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/JobAction'
+      responses:
+        204:
+          description: Action performed
   /workers/{account_name}/{job_queue_id}:
-    get:   # get list of workers for a given job queue
+    get:
       tags: [Workers]
       operationId: app.get_workers
-      summary: Get workers registered in a job queue
+      summary: Get workers registered for a job queue
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
       responses:
         200:
           description: Return workers
-    post:  # register a worker for a given job queue
+    post:
       tags: [Workers]
       operationId: app.register_worker
-      summary: Register a worker in a job queue
+      summary: Register a worker for a job queue
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
@@ -158,10 +214,10 @@ paths:
         200:
           description: Worker registered
   /workers/{account_name}/{job_queue_id}/{worker_id}:
-    get: # get detail of a worker for a given job queue
+    get:
       tags: [Workers]
       operationId: app.get_worker
-      summary: Get a worker registered in a job queue
+      summary: Get detail of a given worker registered for a job queue
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
@@ -169,18 +225,49 @@ paths:
       responses:
         200:
           description: Return worker
+          schema:
+            $ref: '#/definitions/Worker'
+  /workers/{account_name}/{job_queue_id}/{worker_id}/action:
+    put:
+      tags: [Workers]
+      operationId: app.worker_action
+      summary: Perform an action on a worker, eg, pause, resume
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/worker_id'
+        - name: action
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/WorkerAction'
+      responses:
+        204:
+          description: Action performed
+  /tasks/{account_name}/{job_queue_id}/{job_id}:
+    get:
+      tags: [Tasks]
+      operationId: app.get_tasks
+      summary: List all tasks for a given job
+      parameters:
+        - $ref: '#/parameters/account_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/job_id'
+      responses:
+        200:
+          description: Return tasks
   /tasks/{account_name}/{job_queue_id}/_next:
-    post: # worker ask for next task to run
+    post:
       tags: [Tasks]
       operationId: app.next_task
-      summary: Get the next task to run
+      summary: Worker asks for the next task to run
       parameters:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
         - name: worker
           in: body
           schema:
-            $ref: '#/definitions/Worker'
+            $ref: '#/definitions/TaskFile'
       responses:
         204:
           description: Task assigned
@@ -195,15 +282,13 @@ paths:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
         - $ref: '#/parameters/task_name'
-        - name: worker
+        - name: action
           in: body
           schema:
-            $ref: '#/definitions/Worker'
+            $ref: '#/definitions/TaskAction'
       responses:
         204:
-          description: Task assigned
-        404:
-          description: No task to run
+          description: Action performed
   /tasks/{account_name}/{job_queue_id}/{task_name}/_fail:
     post:
       tags: [Tasks]
@@ -213,20 +298,25 @@ paths:
         - $ref: '#/parameters/account_name'
         - $ref: '#/parameters/job_queue_id'
         - $ref: '#/parameters/task_name'
-        - name: worker
+        - name: action
           in: body
           schema:
-            $ref: '#/definitions/Worker'
+            $ref: '#/definitions/TaskAction'
       responses:
         204:
-          description: Task assigned
-        404:
-          description: No task to run
+          description: Action performed
 
 parameters:
   account_name:
     name: account_name
     description: Account's unique name
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9-_]{3,30}$"
+  workflow_owner:
+    name: workflow_owner
+    description: Workflow owner's ccount name
     in: path
     type: string
     required: true
@@ -245,6 +335,13 @@ parameters:
     type: string
     required: true
     pattern: "^[a-zA-Z0-9-_.]{3,30}$"
+  job_id:
+    name: job_id
+    description: Unique ID for a job
+    in: path
+    type: string
+    required: true
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
   job_queue_id:
     name: job_queue_id
     description: Unique ID for a job queue
@@ -320,6 +417,24 @@ definitions:
         example: "BWA-MEM"
         minLength: 3
         maxLength: 35
+  TaskFile:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
   Worker:
     type: object
     required:
@@ -338,7 +453,78 @@ definitions:
         example: "BWA-MEM"
         minLength: 3
         maxLength: 35
-
+  JobQueueAction:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
+  WorkerAction:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
+  JobAction:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
+  TaskAction:
+    type: object
+    required:
+      - _name
+    properties:
+      _id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
+        readOnly: true
+      _name:
+        type: string
+        description: Workflow's name
+        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        example: "BWA-MEM"
+        minLength: 3
+        maxLength: 35
 
 securityDefinitions:
   oauth2:

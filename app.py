@@ -87,26 +87,20 @@ def get_job_queues3(account_name):
     return workflows or ('No workflow found', 404)
 
 
-def get_workflow(account_name, workflow_name):
-    try:
-        workflow = jt_jes.get_workflow(account_name, workflow_name)
-    except AccountNameNotFound as err:
-        return str(err), 404
-    except AMSNotAvailable as err:
-        return str(err), 500
-
-    return workflow or ('No workflow found', 404)
+def get_job_summary(account_name):
+    pass
 
 
-def get_workflow_ver(account_name, workflow_name, workflow_version):
-    try:
-        workflow = jt_jes.get_workflow(account_name, workflow_name, workflow_version)
-    except AccountNameNotFound as err:
-        return str(err), 404
-    except AMSNotAvailable as err:
-        return str(err), 500
+def job_action(account_name):
+    pass
 
-    return workflow or ('No workflow found', 404)
+
+def job_queue_action(account_name):
+    pass
+
+
+def worker_action(account_name):
+    pass
 
 
 def register_job_queue(account_name, account_type='org'):
@@ -117,15 +111,11 @@ def register_job_queue(account_name, account_type='org'):
         return jt_jes.create_account(account_name, account_type)
 
 
-def release_workflow(account_name, workflow_name, workflow_version):
+def register_job_queue1():
     pass
 
 
-def validate_job_json(account_name, workflow_name, workflow_version):
-    pass
-
-
-def download_workflow(account_name, workflow_name, workflow_version):
+def get_tasks(account_name):
     pass
 
 
