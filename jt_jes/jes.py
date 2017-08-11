@@ -2,6 +2,7 @@ import etcd3
 import uuid
 import requests
 import json
+from .jtracker import JTracker
 from .exceptions import AccountNameNotFound, AMSNotAvailable
 
 # settings, need to move out to config
@@ -22,7 +23,7 @@ def _get_account_id_by_name(account_name):
     if r.status_code != 200:
         raise AccountNameNotFound(account_name)
 
-    return json.loads(r.text).get('_id')
+    return json.loads(r.text).get('id')
 
 
 def get_workflows(account_name, workflow_name=None, workflow_version=None):
@@ -33,13 +34,13 @@ def get_workflows(account_name, workflow_name=None, workflow_version=None):
 
         # find the workflows' name and id first
         workflow_name_id_prefix = '/'.join([WRS_ETCD_ROOT,
-                                            'account._id:%s' % account_id,
+                                            'account.id:%s' % account_id,
                                             'workflow/'])
 
         if workflow_name:
-            key_search_prefix = '%s_name:%s/_id' % (workflow_name_id_prefix, workflow_name)
+            key_search_prefix = '%sname:%s/id' % (workflow_name_id_prefix, workflow_name)
         else:
-            key_search_prefix = '%s_name' % workflow_name_id_prefix
+            key_search_prefix = '%sname' % workflow_name_id_prefix
 
         r = etcd_client.get_prefix(key_prefix=key_search_prefix, sort_target='KEY')
 
@@ -52,16 +53,16 @@ def get_workflows(account_name, workflow_name=None, workflow_version=None):
 
             print("k:%s, v:%s" % (k, v))
 
-            workflow_name = k.strip('_name:').rstrip('/_id')
+            workflow_name = k.strip('name:').rstrip('/id')
             workflow_id = v
 
             workflow = {
-                "_id": workflow_id,
-                "_name": workflow_name
+                "id": workflow_id,
+                "name": workflow_name
             }
 
             # ideally we don't read values yet, but python-etcd does not have this option
-            workflow_prefix = '/'.join([WRS_ETCD_ROOT, 'workflow', '_id:%s/' % workflow_id])
+            workflow_prefix = '/'.join([WRS_ETCD_ROOT, 'workflow', 'id:%s/' % workflow_id])
 
             r2 = etcd_client.get_prefix(key_prefix=workflow_prefix, sort_target='KEY')
 
@@ -125,13 +126,13 @@ def get_workflow(account_name, workflow_name, workflow_version=None):
 
 
 def register_workflow(account_name, account_type):
-    _id = str(uuid.uuid4())
+    id = str(uuid.uuid4())
 
-    key = '/'.join([AMS_ROOT, ACCOUNT_PATH, '%s:%s' % ('_name', account_name)])
-    r = etcd_client.put(key, _id)
+    key = '/'.join([AMS_ROOT, ACCOUNT_PATH, '%s:%s' % ('name', account_name)])
+    r = etcd_client.put(key, id)
 
-    key_prefix = '/'.join([AMS_ROOT, ACCOUNT_PATH, 'data', '%s:%s' % ('_id', _id)])
-    r = etcd_client.put('%s/_name' % key_prefix, account_name)
+    key_prefix = '/'.join([AMS_ROOT, ACCOUNT_PATH, 'data', '%s:%s' % ('id', id)])
+    r = etcd_client.put('%s/name' % key_prefix, account_name)
 
     if account_type == 'org':
         r = etcd_client.put('%s/is_org' % key_prefix, '1')
