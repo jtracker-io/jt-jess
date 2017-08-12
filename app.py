@@ -43,9 +43,9 @@ def fail_task(account_name, job_queue_id, task_name):
     pass
 
 
-def get_job_queues(account_name):
+def get_job_queues(account_name, workflow_name, workflow_version, workflow_owner):
     try:
-        workflows = jt_jes.get_workflows(account_name)
+        workflows = jt_jes.get_job_queues(account_name, workflow_name, workflow_version, workflow_owner)
     except AccountNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -56,7 +56,7 @@ def get_job_queues(account_name):
 
 def get_job_queues1(account_name):
     try:
-        workflows = jt_jes.get_workflows(account_name)
+        workflows = jt_jes.get_job_queues(account_name)
     except AccountNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -65,20 +65,9 @@ def get_job_queues1(account_name):
     return workflows or ('No workflow found', 404)
 
 
-def get_job_queues2(account_name):
+def get_job_queues2(account_name, workflow_name, workflow_version):
     try:
-        workflows = jt_jes.get_workflows(account_name)
-    except AccountNameNotFound as err:
-        return str(err), 404
-    except AMSNotAvailable as err:
-        return str(err), 500
-
-    return workflows or ('No workflow found', 404)
-
-
-def get_job_queues3(account_name):
-    try:
-        workflows = jt_jes.get_workflows(account_name)
+        workflows = jt_jes.get_job_queues(account_name, workflow_name, workflow_version)
     except AccountNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
