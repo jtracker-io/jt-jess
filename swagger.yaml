@@ -56,14 +56,14 @@ paths:
             $ref: '#/definitions/JobQueue'
         409:
           description: Workflow registration failed
-  /job_queues/{account_name}/{workflow_owner}/{workflow_name}/{workflow_version}:
+  /job_queues/{account_name}/{workflow_owner_name}/{workflow_name}/{workflow_version}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues
-      summary: Get all job queues for given account, workflow_owner, workflow_name and version
+      summary: Get all job queues for given account, workflow_owner_name, workflow_name and version
       parameters:
         - $ref: '#/parameters/account_name'
-        - $ref: '#/parameters/workflow_owner'
+        - $ref: '#/parameters/workflow_owner_name'
         - $ref: '#/parameters/workflow_name'
         - $ref: '#/parameters/workflow_version'
       responses:
@@ -74,10 +74,10 @@ paths:
     post:
       tags: [Job Queues]
       operationId: app.register_job_queue
-      summary: Register a job queue under a given account, workflow_owner, workflow_name and version
+      summary: Register a job queue under a given account, workflow_owner_name, workflow_name and version
       parameters:
         - $ref: '#/parameters/account_name'
-        - $ref: '#/parameters/workflow_owner'
+        - $ref: '#/parameters/workflow_owner_name'
         - $ref: '#/parameters/workflow_name'
         - $ref: '#/parameters/workflow_version'
         - name: job_queue
@@ -316,8 +316,8 @@ parameters:
     type: string
     required: true
     pattern: "^[a-zA-Z0-9-_]{3,30}$"
-  workflow_owner:
-    name: workflow_owner
+  workflow_owner_name:
+    name: workflow_owner_name
     description: Workflow owner's ccount name
     in: path
     type: string
