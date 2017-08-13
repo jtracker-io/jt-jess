@@ -3,7 +3,7 @@ import uuid
 import requests
 import json
 from .jtracker import JTracker
-from .exceptions import AccountNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
+from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
 
 # settings, need to move out to config
 
@@ -14,15 +14,15 @@ WRS_ETCD_ROOT = '/jthub:jes'
 etcd_client = etcd3.client()
 
 
-def _get_account_id_by_name(account_name):
-    request_url = '%s/accounts/%s' % (AMS_URL.strip('/'), account_name)
+def _get_owner_id_by_name(owner_name):
+    request_url = '%s/accounts/%s' % (AMS_URL.strip('/'), owner_name)
     try:
         r = requests.get(request_url)
     except:
         raise AMSNotAvailable('AMS service unavailable')
 
     if r.status_code != 200:
-        raise AccountNameNotFound(account_name)
+        raise OwnerNameNotFound(owner_name)
 
     return json.loads(r.text).get('id')
 
@@ -42,17 +42,17 @@ def _get_workflow_by_id(workflow_id, workflow_version=None):
     return json.loads(r.text)
 
 
-def get_job_queues(account_name, workflow_name=None, workflow_version=None, workflow_owner_name=None):
-    account_id = _get_account_id_by_name(account_name)
+def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workflow_owner_name=None):
+    owner_id = _get_owner_id_by_name(owner_name)
     job_queues = []
 
-    if account_id:
+    if owner_id:
 
-        # /jthub:jes/account.id:1097accf-601c-4f9f-88b0-031ec231f9e2/workflow.id:
+        # /jthub:jes/owner.id:1097accf-601c-4f9f-88b0-031ec231f9e2/workflow.id:
 
         # find the workflows' name and id first
         job_queues_prefix = '/'.join([WRS_ETCD_ROOT,
-                                            'account.id:%s' % account_id,
+                                            'owner.id:%s' % owner_id,
                                             'workflow.id:'])
 
         r = etcd_client.get_prefix(key_prefix=job_queues_prefix)
@@ -70,7 +70,7 @@ def get_job_queues(account_name, workflow_name=None, workflow_version=None, work
 
             job_queue = {
                 'id': v,
-                'account.name': account_name
+                'owner.name': owner_name
             }
 
             for new_k_vs in k.split('/'):
@@ -97,31 +97,14 @@ def get_job_queues(account_name, workflow_name=None, workflow_version=None, work
 
         return job_queues
     else:
-        raise AccountNameNotFound(Exception("Specific account name not found: %s" % account_name))
+        raise OwnerNameNotFound(Exception("Specific owner name not found: %s" % owner_name))
 
 
-def register_workflow(account_name, account_type):
-    id = str(uuid.uuid4())
-
-    key = '/'.join([AMS_ROOT, ACCOUNT_PATH, '%s:%s' % ('name', account_name)])
-    r = etcd_client.put(key, id)
-
-    key_prefix = '/'.join([AMS_ROOT, ACCOUNT_PATH, 'data', '%s:%s' % ('id', id)])
-    r = etcd_client.put('%s/name' % key_prefix, account_name)
-
-    if account_type == 'org':
-        r = etcd_client.put('%s/is_org' % key_prefix, '1')
-    else:
-        r = etcd_client.put('%s/is_org' % key_prefix, '')
-
-    return get_account(account_name)
-
-
-def update_account():
+def update_owner():
     pass
 
 
-def delete_account():
+def delete_owner():
     pass
 
 

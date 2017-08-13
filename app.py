@@ -3,50 +3,50 @@ import connexion
 import datetime
 import logging
 import jt_jes
-from jt_jes.exceptions import AccountNameNotFound, AMSNotAvailable
+from jt_jes.exceptions import OwnerNameNotFound, AMSNotAvailable
 from connexion import NoContent
 
 
-def get_jobs(account_name):
+def get_jobs(owner_name):
     pass
 
 
-def get_job(account_name):
+def get_job(owner_name):
     pass
 
 
-def enqueue_job(account_name):
+def enqueue_job(owner_name):
     pass
 
 
-def get_workers(account_name, job_queue_id):
+def get_workers(owner_name, job_queue_id):
     pass
 
 
-def get_worker(account_name, job_queue_id, worker_id):
+def get_worker(owner_name, job_queue_id, worker_id):
     pass
 
 
-def register_worker(account_name, job_queue_id):
+def register_worker(owner_name, job_queue_id):
     pass
 
 
-def next_task(account_name, job_queue_id, worker):
+def next_task(owner_name, job_queue_id, worker):
     pass
 
 
-def complete_task(account_name, job_queue_id, task_name):
+def complete_task(owner_name, job_queue_id, task_name):
     pass
 
 
-def fail_task(account_name, job_queue_id, task_name):
+def fail_task(owner_name, job_queue_id, task_name):
     pass
 
 
-def get_job_queues(account_name, workflow_name, workflow_version, workflow_owner_name):
+def get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name):
     try:
-        workflows = jt_jes.get_job_queues(account_name, workflow_name, workflow_version, workflow_owner_name)
-    except AccountNameNotFound as err:
+        workflows = jt_jes.get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name)
+    except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
         return str(err), 500
@@ -54,10 +54,10 @@ def get_job_queues(account_name, workflow_name, workflow_version, workflow_owner
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_job_queues1(account_name):
+def get_job_queues1(owner_name):
     try:
-        workflows = jt_jes.get_job_queues(account_name)
-    except AccountNameNotFound as err:
+        workflows = jt_jes.get_job_queues(owner_name)
+    except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
         return str(err), 500
@@ -65,10 +65,10 @@ def get_job_queues1(account_name):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_job_queues2(account_name, workflow_name, workflow_version):
+def get_job_queues2(owner_name, workflow_name, workflow_version):
     try:
-        workflows = jt_jes.get_job_queues(account_name, workflow_name, workflow_version)
-    except AccountNameNotFound as err:
+        workflows = jt_jes.get_job_queues(owner_name, workflow_name, workflow_version)
+    except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
         return str(err), 500
@@ -76,35 +76,35 @@ def get_job_queues2(account_name, workflow_name, workflow_version):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_job_summary(account_name):
+def get_job_summary(owner_name):
     pass
 
 
-def job_action(account_name):
+def job_action(owner_name):
     pass
 
 
-def job_queue_action(account_name):
+def job_queue_action(owner_name):
     pass
 
 
-def worker_action(account_name):
+def worker_action(owner_name):
     pass
 
 
-def register_job_queue(account_name, account_type='org'):
-    exists = jt_jes.get_account(account_name)
+def register_job_queue(owner_name, owner_type='org'):
+    exists = jt_jes.get_owner(owner_name)
     if exists:
         return NoContent, 409
     else:
-        return jt_jes.create_account(account_name, account_type)
+        return jt_jes.create_owner(owner_name, owner_type)
 
 
 def register_job_queue1():
     pass
 
 
-def get_tasks(account_name):
+def get_tasks(owner_name):
     pass
 
 

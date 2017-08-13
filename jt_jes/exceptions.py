@@ -1,11 +1,14 @@
 __all__ = [
-    'AccountNameNotFound'
+    'OwnerNameNotFound',
+    'WorklowNotFound',
+    'AMSNotAvailable',
+    'WRSNotAvailable'
 ]
 
 
-class AccountNameNotFound(Exception):
+class OwnerNameNotFound(Exception):
     def __str__(self):
-        return 'Account name not found: %s' % (self.args[0])
+        return 'Owner name not found: %s' % (self.args[0])
 
 
 class WorklowNotFound(Exception):
@@ -15,7 +18,7 @@ class WorklowNotFound(Exception):
 
 class AMSNotAvailable(Exception):
     def __str__(self):
-        return 'Account Management Service temporarily not available'
+        return 'Owner Management Service temporarily not available'
 
 
 class WRSNotAvailable(Exception):
