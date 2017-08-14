@@ -35,6 +35,10 @@ def next_task(owner_name, job_queue_id, worker):
     pass
 
 
+def next_task_from_job(owner_name, job_queue_id, job_id, worker):
+    pass
+
+
 def complete_task(owner_name, job_queue_id, task_name):
     pass
 
@@ -96,7 +100,7 @@ def get_job_queues2(owner_name, workflow_name):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_job_summary(owner_name):
+def get_job_summary(owner_name, job_queue_id):
     pass
 
 

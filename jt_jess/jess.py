@@ -28,9 +28,9 @@ def _get_owner_id_by_name(owner_name):
 
 
 def _get_workflow_by_id(workflow_id, workflow_version=None):
-    request_url = '%s/workflows/workflow_id/%s' % (WRS_URL.strip('/'), workflow_id)
+    request_url = '%s/workflows/_id/%s' % (WRS_URL.strip('/'), workflow_id)
     if workflow_version:
-        request_url += '/ver/%s' % workflow_version
+        request_url += '/_ver/%s' % workflow_version
     try:
         r = requests.get(request_url)
     except:

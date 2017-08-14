@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: JTHub Job Execution Service API
+  title: JTHub Job Execution Scheduling Service API
   version: "0.1"
 consumes:
   - application/json
@@ -69,7 +69,7 @@ paths:
             $ref: '#/definitions/JobQueue'
         409:
           description: Workflow registration failed
-  /job_queues/{owner_name}/{job_queue_id}/action:
+  /job_queues/{owner_name}/{job_queue_id}/_action:
     put:
       tags: [Job Queues]
       operationId: app.job_queue_action
@@ -118,7 +118,7 @@ paths:
             $ref: '#/definitions/JobFile'
         409:
           description: Job enqueueing failed
-  /jobs/{owner_name}/{job_queue_id}/summary:
+  /jobs/{owner_name}/{job_queue_id}/_summary:
     get:
       tags: [Jobs]
       operationId: app.get_job_summary
@@ -149,7 +149,7 @@ paths:
       responses:
         200:
           description: Return job
-  /jobs/{owner_name}/{job_queue_id}/{job_id}/action:
+  /jobs/{owner_name}/{job_queue_id}/{job_id}/_action:
     put:
       tags: [Jobs]
       operationId: app.job_action
@@ -205,7 +205,7 @@ paths:
           description: Return worker
           schema:
             $ref: '#/definitions/Worker'
-  /workers/{owner_name}/{job_queue_id}/{worker_id}/action:
+  /workers/{owner_name}/{job_queue_id}/{worker_id}/_action:
     put:
       tags: [Workers]
       operationId: app.worker_action
@@ -242,6 +242,24 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/job_queue_id'
+        - name: worker
+          in: body
+          schema:
+            $ref: '#/definitions/TaskFile'
+      responses:
+        204:
+          description: Task assigned
+        404:
+          description: No task to run
+  /tasks/{owner_name}/{job_queue_id}/{job_id}/_next:
+    post:
+      tags: [Tasks]
+      operationId: app.next_task_from_job
+      summary: Worker asks for the next task from a given job to run
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/job_queue_id'
+        - $ref: '#/parameters/job_id'
         - name: worker
           in: body
           schema:
@@ -293,21 +311,21 @@ parameters:
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z0-9-_]{3,30}$"
+    pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_]{2,31}$"
   workflow_name:
     name: workflow_name
     description: Workflow's name
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z0-9-_.]{3,100}$"
+    pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_.]{2,31}$"
   workflow_version:
     name: workflow_version
     description: Workflow's version
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z0-9-_.]{3,30}$"
+    pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{1,15}$"
   job_id:
     name: job_id
     description: Unique ID for a job
@@ -329,13 +347,20 @@ parameters:
     type: string
     required: true
     pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  job_name:
+    name: job_name
+    description: Job's name
+    in: path
+    type: string
+    required: true
+    pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,63}$"
   task_name:
     name: task_name
     description: Task's name
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z0-9-_.]{2,256}$"
+    pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,255}$"
 
 
 definitions:
@@ -353,10 +378,10 @@ definitions:
       name:
         type: string
         description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,30}$"
+        pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_]{2,31}$"
         example: "BWA-MEM"
         minLength: 3
-        maxLength: 30
+        maxLength: 32
       workflow_type:
         type: string
         description: In which language workflow is written
@@ -386,10 +411,10 @@ definitions:
       name:
         type: string
         description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,63}$"
         example: "BWA-MEM"
         minLength: 3
-        maxLength: 35
+        maxLength: 64
   TaskFile:
     type: object
     required:
@@ -404,14 +429,14 @@ definitions:
       name:
         type: string
         description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,255}$"
         example: "BWA-MEM"
         minLength: 3
-        maxLength: 35
+        maxLength: 256
   Worker:
     type: object
     required:
-      - name
+      - id
     properties:
       id:
         type: string
@@ -419,13 +444,6 @@ definitions:
         pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
         readOnly: true
-      name:
-        type: string
-        description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
-        example: "BWA-MEM"
-        minLength: 3
-        maxLength: 35
   JobQueueAction:
     type: object
     required:
