@@ -18,7 +18,7 @@ class WorklowNotFound(Exception):
 
 class AMSNotAvailable(Exception):
     def __str__(self):
-        return 'Owner Management Service temporarily not available'
+        return 'Account Management Service temporarily not available'
 
 
 class WRSNotAvailable(Exception):

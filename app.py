@@ -3,7 +3,7 @@ import connexion
 import datetime
 import logging
 import jt_jes
-from jt_jes.exceptions import OwnerNameNotFound, AMSNotAvailable
+from jt_jes.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
 from connexion import NoContent
 
 
@@ -58,6 +58,10 @@ def get_job_queues(owner_name, workflow_name, workflow_version):
         return str(err), 404
     except AMSNotAvailable as err:
         return str(err), 500
+    except WorklowNotFound as err:
+        return str(err), 404
+    except WRSNotAvailable as err:
+        return str(err), 500
 
     return workflows or ('No workflow job queue found', 404)
 
@@ -68,6 +72,10 @@ def get_job_queues1(owner_name):
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
+        return str(err), 500
+    except WorklowNotFound as err:
+        return str(err), 404
+    except WRSNotAvailable as err:
         return str(err), 500
 
     return workflows or ('No workflow job queue found', 404)
@@ -87,6 +95,10 @@ def get_job_queues2(owner_name, workflow_name):
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
+        return str(err), 500
+    except WorklowNotFound as err:
+        return str(err), 404
+    except WRSNotAvailable as err:
         return str(err), 500
 
     return workflows or ('No workflow job queue found', 404)

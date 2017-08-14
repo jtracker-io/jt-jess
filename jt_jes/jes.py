@@ -82,8 +82,10 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
 
             try:
                 workflow = _get_workflow_by_id(job_queue.get('workflow.id'), workflow_version)
-            except:
+            except WorklowNotFound:
                 continue
+            except WRSNotAvailable:
+                raise WRSNotAvailable('WRS service temporarily unavailable')
 
             if not workflow or (workflow_owner_name and workflow_owner_name != workflow.get('owner.name')) or \
                     (workflow_name and workflow_name != workflow.get('name')):
