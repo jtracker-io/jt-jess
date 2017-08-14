@@ -30,11 +30,11 @@ def _get_owner_id_by_name(owner_name):
 def _get_workflow_by_id(workflow_id, workflow_version=None):
     request_url = '%s/workflows/workflow_id/%s' % (WRS_URL.strip('/'), workflow_id)
     if workflow_version:
-        request_url += '?workflow_version=%s' % workflow_version
+        request_url += '/ver/%s' % workflow_version
     try:
         r = requests.get(request_url)
     except:
-        raise WRSNotAvailable('WRS service unavailable')
+        raise WRSNotAvailable('WRS service temporarily unavailable')
 
     if r.status_code != 200:
         raise WorklowNotFound(workflow_id)
@@ -47,9 +47,6 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
     job_queues = []
 
     if owner_id:
-
-        # /jthub:jes/owner.id:1097accf-601c-4f9f-88b0-031ec231f9e2/workflow.id:
-
         # find the workflows' name and id first
         job_queues_prefix = '/'.join([WRS_ETCD_ROOT,
                                             'owner.id:%s' % owner_id,
@@ -87,8 +84,8 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
             except WRSNotAvailable:
                 raise WRSNotAvailable('WRS service temporarily unavailable')
 
-            if not workflow or (workflow_owner_name and workflow_owner_name != workflow.get('owner.name')) or \
-                    (workflow_name and workflow_name != workflow.get('name')):
+            if not workflow or (workflow_owner_name is not None and workflow_owner_name != workflow.get('owner.name')) \
+                    or (workflow_name and workflow_name != workflow.get('name')):
                 continue
 
             job_queue['workflow.name'] = workflow.get('name')

@@ -2,8 +2,8 @@
 import connexion
 import datetime
 import logging
-import jt_jes
-from jt_jes.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
+import jt_jess
+from jt_jess.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
 from connexion import NoContent
 
 
@@ -43,8 +43,8 @@ def fail_task(owner_name, job_queue_id, task_name):
     pass
 
 
-def get_job_queues(owner_name, workflow_name, workflow_version):
-    if '.' in workflow_name:
+def get_job_queues(owner_name, workflow_name=None, workflow_version=None):
+    if workflow_name and '.' in workflow_name:
         if len(workflow_name.split('.')) > 2:
             return 'Value for workflow name parameter can not have more than two dots (.)', 400
         else:
@@ -53,7 +53,7 @@ def get_job_queues(owner_name, workflow_name, workflow_version):
         workflow_owner_name = owner_name
 
     try:
-        workflows = jt_jes.get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name)
+        workflows = jt_jess.get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -68,7 +68,7 @@ def get_job_queues(owner_name, workflow_name, workflow_version):
 
 def get_job_queues1(owner_name):
     try:
-        workflows = jt_jes.get_job_queues(owner_name)
+        workflows = get_job_queues(owner_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -82,16 +82,8 @@ def get_job_queues1(owner_name):
 
 
 def get_job_queues2(owner_name, workflow_name):
-    if '.' in workflow_name:
-        if len(workflow_name.split('.')) > 2:
-            return 'Value for workflow name parameter can not have more than two dots (.)', 400
-        else:
-            workflow_owner_name, workflow_name = workflow_name.split('.')
-    else:
-        workflow_owner_name = owner_name
-
     try:
-        workflows = jt_jes.get_job_queues(owner_name, workflow_name, None, workflow_owner_name)
+        workflows = get_job_queues(owner_name, workflow_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -121,11 +113,11 @@ def worker_action(owner_name):
 
 
 def register_job_queue(owner_name, owner_type='org'):
-    exists = jt_jes.get_owner(owner_name)
+    exists = jt_jess.get_owner(owner_name)
     if exists:
         return NoContent, 409
     else:
-        return jt_jes.create_owner(owner_name, owner_type)
+        return jt_jess.create_owner(owner_name, owner_type)
 
 
 def register_job_queue1():
@@ -138,7 +130,7 @@ def get_tasks(owner_name):
 
 logging.basicConfig(level=logging.INFO)
 app = connexion.App(__name__)
-app.add_api('swagger.yaml', base_path='/api/jt-jes/v0.1')
+app.add_api('swagger.yaml', base_path='/api/jt-jess/v0.1')
 # set the WSGI application callable to allow using uWSGI:
 # uwsgi --http :8080 -w app
 application = app.app
