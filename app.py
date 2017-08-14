@@ -43,7 +43,15 @@ def fail_task(owner_name, job_queue_id, task_name):
     pass
 
 
-def get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name):
+def get_job_queues(owner_name, workflow_name, workflow_version):
+    if '.' in workflow_name:
+        if len(workflow_name.split('.')) > 2:
+            return 'Value for workflow name parameter can not have more than two dots (.)', 400
+        else:
+            workflow_owner_name, workflow_name = workflow_name.split('.')
+    else:
+        workflow_owner_name = owner_name
+
     try:
         workflows = jt_jes.get_job_queues(owner_name, workflow_name, workflow_version, workflow_owner_name)
     except OwnerNameNotFound as err:
@@ -65,9 +73,17 @@ def get_job_queues1(owner_name):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_job_queues2(owner_name, workflow_name, workflow_version):
+def get_job_queues2(owner_name, workflow_name):
+    if '.' in workflow_name:
+        if len(workflow_name.split('.')) > 2:
+            return 'Value for workflow name parameter can not have more than two dots (.)', 400
+        else:
+            workflow_owner_name, workflow_name = workflow_name.split('.')
+    else:
+        workflow_owner_name = owner_name
+
     try:
-        workflows = jt_jes.get_job_queues(owner_name, workflow_name, workflow_version)
+        workflows = jt_jes.get_job_queues(owner_name, workflow_name, None, workflow_owner_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:

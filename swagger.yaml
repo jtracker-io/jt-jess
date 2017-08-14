@@ -23,10 +23,23 @@ paths:
           description: Return job queues for the specified owner
           schema:
             type: array
-  /job_queues/{owner_name}/{workflow_name}/{workflow_version}:
+  /job_queues/{owner_name}/{workflow_name}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues2
+      summary: Get all job queues under a given owner and workflow_name
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/workflow_name'
+      responses:
+        200:
+          description: Return job queues for a given owner and workflow_name
+          schema:
+            type: array
+  /job_queues/{owner_name}/{workflow_name}/{workflow_version}:
+    get:
+      tags: [Job Queues]
+      operationId: app.get_job_queues
       summary: Get all job queues for given owner, workflow_name and version
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -52,41 +65,6 @@ paths:
       responses:
         200:
           description: Workflow created
-          schema:
-            $ref: '#/definitions/JobQueue'
-        409:
-          description: Workflow registration failed
-  /job_queues/{owner_name}/{workflow_owner_name}/{workflow_name}/{workflow_version}:
-    get:
-      tags: [Job Queues]
-      operationId: app.get_job_queues
-      summary: Get all job queues for given owner, workflow_owner_name, workflow_name and version
-      parameters:
-        - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/workflow_owner_name'
-        - $ref: '#/parameters/workflow_name'
-        - $ref: '#/parameters/workflow_version'
-      responses:
-        200:
-          description: Return job queues for the specified owner
-          schema:
-            type: array
-    post:
-      tags: [Job Queues]
-      operationId: app.register_job_queue
-      summary: Register a job queue under a given owner, workflow_owner_name, workflow_name and version
-      parameters:
-        - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/workflow_owner_name'
-        - $ref: '#/parameters/workflow_name'
-        - $ref: '#/parameters/workflow_version'
-        - name: job_queue
-          in: body
-          schema:
-            $ref: '#/definitions/JobQueue'
-      responses:
-        200:
-          description: Job queue registered
           schema:
             $ref: '#/definitions/JobQueue'
         409:
@@ -316,20 +294,13 @@ parameters:
     type: string
     required: true
     pattern: "^[a-zA-Z0-9-_]{3,30}$"
-  workflow_owner_name:
-    name: workflow_owner_name
-    description: Workflow owner's ccount name
-    in: path
-    type: string
-    required: true
-    pattern: "^[a-zA-Z0-9-_]{3,30}$"
   workflow_name:
     name: workflow_name
     description: Workflow's name
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z0-9-_]{3,30}$"
+    pattern: "^[a-zA-Z0-9-_.]{3,100}$"
   workflow_version:
     name: workflow_version
     description: Workflow's version
