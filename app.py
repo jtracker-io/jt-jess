@@ -112,8 +112,8 @@ def job_queue_action(owner_name):
     pass
 
 
-def worker_action(owner_name):
-    pass
+def worker_action(owner_name, job_queue_id, worker_id):
+    return
 
 
 def register_job_queue(owner_name, owner_type='org'):
