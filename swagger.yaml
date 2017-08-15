@@ -235,7 +235,7 @@ paths:
         200:
           description: Return tasks
   /tasks/{owner_name}/{job_queue_id}/_next:
-    post:
+    put:
       tags: [Tasks]
       operationId: app.next_task
       summary: Worker asks for the next task to run
@@ -252,7 +252,7 @@ paths:
         404:
           description: No task to run
   /tasks/{owner_name}/{job_queue_id}/{job_id}/_next:
-    post:
+    put:
       tags: [Tasks]
       operationId: app.next_task_from_job
       summary: Worker asks for the next task from a given job to run
@@ -270,7 +270,7 @@ paths:
         404:
           description: No task to run
   /tasks/{owner_name}/{job_queue_id}/{job_id}/{task_name}/_complete:
-    post:
+    put:
       tags: [Tasks]
       operationId: app.complete_task
       summary: Worker reports completion of a task
@@ -287,7 +287,7 @@ paths:
         204:
           description: Action performed
   /tasks/{owner_name}/{job_queue_id}/{job_id}/{task_name}/_fail:
-    post:
+    put:
       tags: [Tasks]
       operationId: app.fail_task
       summary: Worker reports failure of a task
