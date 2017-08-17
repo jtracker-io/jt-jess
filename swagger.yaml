@@ -107,15 +107,15 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/job_queue_id'
-        - name: job_file
+        - name: jobjson
           in: body
           schema:
-            $ref: '#/definitions/JobFile'
+            $ref: '#/definitions/JobJSON'
       responses:
         200:
           description: Job enqueued
           schema:
-            $ref: '#/definitions/JobFile'
+            $ref: '#/definitions/JobJSON'
         409:
           description: Job enqueueing failed
   /jobs/{owner_name}/{job_queue_id}/_summary:
@@ -146,6 +146,10 @@ paths:
           type: string
           required: true
           pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        - name: state
+          type: string
+          in: query
+          enum: ['queued', 'running', 'completed', 'failed', 'paused']
       responses:
         200:
           description: Return job
@@ -397,10 +401,8 @@ definitions:
         description: Creation time
         example: "2015-07-07T15:49:51.230+02:00"
         readOnly: true
-  JobFile:
+  JobJSON:
     type: object
-    required:
-      - name
     properties:
       id:
         type: string

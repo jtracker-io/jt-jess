@@ -7,16 +7,20 @@ from jt_jess.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFou
 from connexion import NoContent
 
 
-def get_jobs(owner_name):
-    pass
+def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
+    return jt_jess.get_jobs(owner_name, job_queue_id, job_id, state) or ('No job found', 404)
 
 
-def get_job(owner_name):
-    pass
+def get_job(owner_name, job_queue_id, job_id, state=None):
+    jobs = get_jobs(owner_name, job_queue_id, job_id, state)
+    if jobs:
+        return jobs[0]
+    else:
+        return 'No job found', 404
 
 
-def enqueue_job(owner_name):
-    pass
+def enqueue_job(owner_name, job_queue_id, jobjson):
+    return jt_jess.enqueue_job(owner_name, job_queue_id, jobjson)
 
 
 def get_workers(owner_name, job_queue_id):
