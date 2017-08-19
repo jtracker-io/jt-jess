@@ -1,1 +1,1 @@
-from .jess import get_job_queues, get_jobs, enqueue_job, next_task
+from .jess import get_job_queues, get_jobs, enqueue_job, next_task, complete_task

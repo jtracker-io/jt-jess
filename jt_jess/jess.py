@@ -203,7 +203,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
 
             task_lists = {}
             for current_task in nx.topological_sort(G):  # generate a linear task execution plan
-                print(current_task)
+                #print(current_task)
                 if current_task in ('', 'download'):  # TODO: need to deal with gather step that depends on scatter step
                     continue
                 task_state = tasks.get(current_task).get('state')
@@ -288,6 +288,26 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 task_file = task_r[0].decode("utf-8")
 
                 # TODO: modify task_file as needed
+                # check dependent tasks to see whether they are completed
+                dependency_ready = True
+                depends_on = json.loads(task_file).get('depends_on')
+                dtasks = {}
+                if depends_on:
+                    for dt in depends_on:
+                        dt_name = dt.split('@')[1]
+                        # TODO: deal with gather dependencies later
+                        if dt_name == 'download': continue
+
+                        if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
+                            dependency_ready = False
+                            break
+                        dtasks[dt_name] = dt
+
+                if not dependency_ready:
+                    continue
+
+                # TODO: check current task for parameters depending on parent tasks, fetch output from parent tasks as needed
+
 
                 new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
@@ -302,6 +322,8 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                     ],
                     failure=[]
                 )
+
+                # TODO: add worker information in task_file
 
                 task_to_be_scheduled['state'] = 'running'
                 return task_to_be_scheduled
@@ -345,6 +367,18 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 task_file = task_r[0].decode("utf-8")
 
                 # TODO: modify task_file as needed
+                # check dependent tasks to see whether they are completed
+                dependency_ready = True
+                depends_on = json.loads(task_file).get('depends_on')
+                if depends_on:
+                    for dt in depends_on:
+                        dt_name = dt.split('@')[1]
+                        if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
+                            dependency_ready = False
+                            break
+
+                if not dependency_ready:
+                    continue
 
                 new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')
                 new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
@@ -364,4 +398,57 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 )
 
                 task_to_be_scheduled['state'] = 'running'
+                # TODO: add worker information in task_file
+
                 return task_to_be_scheduled
+
+def complete_task(owner_name, job_queue_id, job_id, task_name, result):
+    jobs = get_jobs(owner_name, job_queue_id, job_id, 'running')
+    print(jobs)
+    if not jobs:
+        # raise JobNotFound error here
+        return
+
+    job = jobs[0]
+    task_etcd_key = '/'.join([
+        JESS_ETCD_ROOT,
+        'job_queue.id:%s' % job_queue_id,
+        'job.id:%s' % job.get('id'),
+        'task@tasks',
+        'name:%s' % task_name,
+        'state:running',
+        'task_file'
+    ])
+
+    task = job.get('tasks_by_name').get(task_name)
+
+    task_r = etcd_client.get(task_etcd_key)
+    try:
+        task_file = task_r[0].decode("utf-8")
+    except:
+        # raise TaskNotFound or TaskNotInRunningState
+        return
+
+    #print(task)
+    #print(task_file)
+
+    # TODO: verify worker is the same as expected
+
+    # TODO: update task_file with result reported by worker
+
+    # write the updated task_file back
+    new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:completed/')
+
+    etcd_client.transaction(
+        compare=[
+            etcd_client.transactions.version(task_etcd_key) > 0,
+        ],
+        success=[
+            etcd_client.transactions.put(new_task_etcd_key, task_file),
+            etcd_client.transactions.delete(task_etcd_key),
+        ],
+        failure=[]
+    )
+
+    task['state'] = 'completed'
+    return task

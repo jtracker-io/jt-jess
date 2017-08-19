@@ -283,10 +283,11 @@ paths:
         - $ref: '#/parameters/job_queue_id'
         - $ref: '#/parameters/job_id'
         - $ref: '#/parameters/task_name'
-        - name: action
+        - name: result
+          required: true
           in: body
           schema:
-            $ref: '#/definitions/TaskAction'
+            type: object
       responses:
         204:
           description: Action performed
@@ -300,10 +301,11 @@ paths:
         - $ref: '#/parameters/job_queue_id'
         - $ref: '#/parameters/job_id'
         - $ref: '#/parameters/task_name'
-        - name: action
+        - name: result
+          required: true
           in: body
           schema:
-            $ref: '#/definitions/TaskAction'
+            type: object
       responses:
         204:
           description: Action performed

@@ -43,11 +43,11 @@ def next_task_from_job(owner_name, job_queue_id, worker, job_id):
     return next_task(owner_name, job_queue_id, worker, job_id)
 
 
-def complete_task(owner_name, job_queue_id, task_name):
-    pass
+def complete_task(owner_name, job_queue_id, job_id, task_name, result):
+    return jt_jess.complete_task(owner_name, job_queue_id, job_id, task_name, result)
 
 
-def fail_task(owner_name, job_queue_id, task_name):
+def fail_task(owner_name, job_queue_id, job_id, task_name, result):
     pass
 
 
