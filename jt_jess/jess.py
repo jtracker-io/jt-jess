@@ -2,6 +2,7 @@ import etcd3
 import uuid
 import requests
 import json
+import networkx as nx
 from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
 
 # settings, need to move out to config
@@ -130,9 +131,9 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
 
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
                                             'job_queue.id:%s' % job_queue_id,
-                                            'job@jobs/id:'])
+                                            'job@jobs/state:%s' % ('' if state is None else state + '/')])
 
-        r = etcd_client.get_prefix(key_prefix=jobs_prefix)
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
 
         for value, meta in r:
             k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
@@ -157,10 +158,6 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
             if job_id is not None and job_id != job.get('id'):  # if job_id specified
                 continue
 
-            print(state)
-            if state is not None and state != job.get('state'):
-                continue
-
             tasks_prefix = '/'.join([JESS_ETCD_ROOT,
                                     'job_queue.id:%s' % job_queue_id,
                                     'job.id:%s' % job['id'],
@@ -168,7 +165,9 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
 
             r1 = etcd_client.get_prefix(key_prefix=tasks_prefix)
 
-            tasks = []
+            tasks = dict()
+            G = nx.DiGraph()
+            root = set([''])
             for value, meta in r1:
                 k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
                                                                'job_queue.id:%s' % job_queue_id,
@@ -189,9 +188,31 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
                     else:
                         task[new_k_vs] = v
 
-                tasks.append(task)
+                task_name = task.get('name')
+                dependent_tasks = json.loads(task.get('task_file')).get('depends_on')
+                if dependent_tasks:
+                    for dt in dependent_tasks:
+                        if not dt.startswith('completed@'):
+                            continue
+                        dt = dt.split('@')[1]
+                        G.add_edge(dt, task_name)
+                else:
+                    G.add_edge('', task_name)
 
-            job['tasks'] = tasks
+                tasks[task_name] = task
+
+            task_lists = {}
+            for parent_task, current_task in nx.bfs_edges(G, ''):
+                task_state = tasks.get(current_task).get('state')
+                if task_state not in task_lists:
+                    task_lists[task_state] = []
+
+                task_lists[task_state].append(
+                    {current_task: tasks.get(current_task)}
+                )
+
+            job['tasks_by_name'] = tasks
+            job['tasks_by_state'] = task_lists
             jobs.append(job)
 
         if jobs:
@@ -214,7 +235,7 @@ def enqueue_job(owner_name, job_queue_id, jobjson):
         if job_with_execution_plan:
             jobjson['id'] = str(uuid.uuid4())
             job_name = jobjson['name'] if jobjson['name'] else '_unnamed'
-            etcd_client.put('%s/job_queue.id:%s/job@jobs/id:%s/name:%s/state:queued/job_file' %
+            etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
                             (JESS_ETCD_ROOT, job_queue_id, jobjson['id'], job_name), value=json.dumps(jobjson))
             for task in job_with_execution_plan.pop('tasks'):
                 etcd_client.put('%s/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file' %
