@@ -197,12 +197,15 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
                         dt = dt.split('@')[1]
                         G.add_edge(dt, task_name)
                 else:
-                    G.add_edge('', task_name)
+                    G.add_edge('', task_name)  # this step has no dependency, use '' as root node to be parent task
 
                 tasks[task_name] = task
 
             task_lists = {}
-            for parent_task, current_task in nx.bfs_edges(G, ''):
+            for current_task in nx.topological_sort(G):  # generate a linear task execution plan
+                print(current_task)
+                if current_task in ('', 'download'):  # TODO: need to deal with gather step that depends on scatter step
+                    continue
                 task_state = tasks.get(current_task).get('state')
                 if task_state not in task_lists:
                     task_lists[task_state] = []
@@ -252,6 +255,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
     jobs = get_jobs(owner_name, job_queue_id, job_id, 'running')
     if jobs:
         for job in jobs:
+            # TODO: put this in a function that can be called from different places
             for task in job.get('tasks_by_state', {}).get('queued', []):
                 task_to_be_scheduled = list(task.values())[0]
                 task_to_be_scheduled['job.id'] = job.get('id')
@@ -285,7 +289,6 @@ def next_task(owner_name, job_queue_id, worker, job_id):
 
                 # TODO: modify task_file as needed
 
-                new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')
                 new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
                 etcd_client.transaction(
@@ -300,7 +303,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                     failure=[]
                 )
 
-                task_to_be_scheduled.update({'state': 'running'})
+                task_to_be_scheduled['state'] = 'running'
                 return task_to_be_scheduled
 
     # if no task ready in running jobs, try find in queued jobs
@@ -360,4 +363,5 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                     failure=[]
                 )
 
+                task_to_be_scheduled['state'] = 'running'
                 return task_to_be_scheduled
