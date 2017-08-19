@@ -35,12 +35,12 @@ def register_worker(owner_name, job_queue_id):
     pass
 
 
-def next_task(owner_name, job_queue_id, worker):
-    pass
+def next_task(owner_name, job_queue_id, worker, job_id=None):
+    return jt_jess.next_task(owner_name, job_queue_id, worker, job_id)
 
 
-def next_task_from_job(owner_name, job_queue_id, job_id, worker):
-    pass
+def next_task_from_job(owner_name, job_queue_id, worker, job_id):
+    return next_task(owner_name, job_queue_id, worker, job_id)
 
 
 def complete_task(owner_name, job_queue_id, task_name):

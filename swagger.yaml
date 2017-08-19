@@ -226,7 +226,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /tasks/{owner_name}/{job_queue_id}/{job_id}:
+  /tasks/{owner_name}/{job_queue_id}/{job_id}:  # may not need this, get job should be sufficient
     get:
       tags: [Tasks]
       operationId: app.get_tasks
