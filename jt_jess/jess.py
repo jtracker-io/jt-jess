@@ -237,7 +237,7 @@ def enqueue_job(owner_name, job_queue_id, jobjson):
 
         if job_with_execution_plan:
             jobjson['id'] = str(uuid.uuid4())
-            job_name = jobjson['name'] if jobjson['name'] else '_unnamed'
+            job_name = jobjson['name'] if jobjson.get('name') else '_unnamed'
             etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
                             (JESS_ETCD_ROOT, job_queue_id, jobjson['id'], job_name), value=json.dumps(jobjson))
             for task in job_with_execution_plan.pop('tasks'):
