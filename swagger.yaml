@@ -192,6 +192,27 @@ paths:
       responses:
         204:
           description: Action performed
+  /owner/{owner_name}/workers:
+    get:
+      tags: [Workers]
+      operationId: app.get_workers1
+      summary: Get workers registered for an owner
+      parameters:
+        - $ref: '#/parameters/owner_name'
+      responses:
+        200:
+          description: Return workers
+  /owner/{owner_name}/worker/{worker_id}:
+    get:
+      tags: [Workers]
+      operationId: app.get_workers2
+      summary: Get worker by worker ID registered for an owner
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/worker_id'
+      responses:
+        200:
+          description: Return workers
   /owner/{owner_name}/job_queue/{job_queue_id}/workers:
     get:
       tags: [Workers]

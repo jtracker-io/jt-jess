@@ -27,6 +27,14 @@ def get_workers(owner_name, job_queue_id):
     pass
 
 
+def get_workers1(owner_name, job_queue_id):
+    pass
+
+
+def get_workers2(owner_name, job_queue_id):
+    pass
+
+
 def get_worker(owner_name, job_queue_id, worker_id):
     pass
 
