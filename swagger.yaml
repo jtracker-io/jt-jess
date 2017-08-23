@@ -11,7 +11,7 @@ security:
   # (only active if the TOKENINFO_URL environment variable is set)
   - oauth2: [uid]
 paths:
-  /owner/{owner_name}/job_queue/{job_queue_id}:
+  /job_queues/owner/{owner_name}/job_queue/{job_queue_id}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues4
@@ -24,7 +24,7 @@ paths:
           description: Return job queues for the specified owner
           schema:
             type: array
-  /owner/{owner_name}/job_queues:
+  /job_queues/owner/{owner_name}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues1
@@ -36,7 +36,7 @@ paths:
           description: Return job queues for the specified owner
           schema:
             type: array
-  /owner/{owner_name}/workflow/{workflow_name}/job_queues:
+  /job_queues/owner/{owner_name}/workflow/{workflow_name}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues2
@@ -49,7 +49,7 @@ paths:
           description: Return job queues for a given owner and workflow_name
           schema:
             type: array
-  /owner/{owner_name}/workflow/{workflow_name}/ver/{workflow_version}/job_queues:
+  /job_queues/owner/{owner_name}/workflow/{workflow_name}/ver/{workflow_version}:
     get:
       tags: [Job Queues]
       operationId: app.get_job_queues
@@ -107,7 +107,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /owner/{owner_name}/job_queue/{job_queue_id}/jobs:
+  /jobs/owner/{owner_name}/job_queue/{job_queue_id}:
     get:
       tags: [Jobs]
       operationId: app.get_jobs
@@ -140,7 +140,7 @@ paths:
             $ref: '#/definitions/JobJSON'
         409:
           description: Job enqueueing failed
-  /owner/{owner_name}/job_queue/{job_queue_id}/summary:
+  /jobs/owner/{owner_name}/job_queue/{job_queue_id}/summary:
     get:
       tags: [Jobs]
       operationId: app.get_job_summary
@@ -155,7 +155,7 @@ paths:
       responses:
         200:
           description: Return jobs
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}:
+  /jobs/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}:
     get:
       tags: [Jobs]
       operationId: app.get_job
@@ -175,7 +175,7 @@ paths:
       responses:
         200:
           description: Return job
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/action:
+  /jobs/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/action:
     put:
       tags: [Jobs]
       operationId: app.job_action
@@ -192,7 +192,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /owner/{owner_name}/workers:
+  /workers/owner/{owner_name}:
     get:
       tags: [Workers]
       operationId: app.get_workers1
@@ -202,7 +202,7 @@ paths:
       responses:
         200:
           description: Return workers
-  /owner/{owner_name}/worker/{worker_id}:
+  /workers/owner/{owner_name}/worker/{worker_id}:
     get:
       tags: [Workers]
       operationId: app.get_workers2
@@ -213,7 +213,7 @@ paths:
       responses:
         200:
           description: Return workers
-  /owner/{owner_name}/job_queue/{job_queue_id}/workers:
+  /workers/owner/{owner_name}/job_queue/{job_queue_id}:
     get:
       tags: [Workers]
       operationId: app.get_workers
@@ -238,7 +238,7 @@ paths:
       responses:
         200:
           description: Worker registered
-  /owner/{owner_name}/job_queue/{job_queue_id}/worker/{worker_id}:
+  /workers/owner/{owner_name}/job_queue/{job_queue_id}/worker/{worker_id}:
     get:
       tags: [Workers]
       operationId: app.get_worker
@@ -252,7 +252,7 @@ paths:
           description: Return worker
           schema:
             $ref: '#/definitions/Worker'
-  /owner/{owner_name}/job_queue/{job_queue_id}/worker/{worker_id}/action:
+  /workers/owner/{owner_name}/job_queue/{job_queue_id}/worker/{worker_id}/action:
     put:
       tags: [Workers]
       operationId: app.worker_action
@@ -269,7 +269,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/tasks:  # may not need this, get job should be sufficient
+  /tasks/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}:  # may not need this, get job should be sufficient
     get:
       tags: [Tasks]
       operationId: app.get_tasks
@@ -281,7 +281,7 @@ paths:
       responses:
         200:
           description: Return tasks
-  /owner/{owner_name}/job_queue/{job_queue_id}/next_task:
+  /tasks/owner/{owner_name}/job_queue/{job_queue_id}/next_task:
     put:
       tags: [Tasks]
       operationId: app.next_task
@@ -298,7 +298,7 @@ paths:
           description: Task assigned
         404:
           description: No task to run
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/next_task:
+  /tasks/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/next_task:
     put:
       tags: [Tasks]
       operationId: app.next_task_from_job
@@ -316,7 +316,7 @@ paths:
           description: Task assigned
         404:
           description: No task to run
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/task/{task_name}/task_complete:
+  /tasks/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/task/{task_name}/task_complete:
     put:
       tags: [Tasks]
       operationId: app.complete_task
@@ -334,7 +334,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/task/{task_name}/task_fail:
+  /tasks/owner/{owner_name}/job_queue/{job_queue_id}/job/{job_id}/task/{task_name}/task_fail:
     put:
       tags: [Tasks]
       operationId: app.fail_task
