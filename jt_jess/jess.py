@@ -28,9 +28,9 @@ def _get_owner_id_by_name(owner_name):
 
 
 def _get_workflow_by_id(workflow_id, workflow_version=None):
-    request_url = '%s/workflows/_id/%s' % (WRS_URL.strip('/'), workflow_id)
+    request_url = '%s/workflows/id/%s' % (WRS_URL.strip('/'), workflow_id)
     if workflow_version:
-        request_url += '/_ver/%s' % workflow_version
+        request_url += '/ver/%s' % workflow_version
     try:
         r = requests.get(request_url)
     except:
@@ -44,7 +44,7 @@ def _get_workflow_by_id(workflow_id, workflow_version=None):
 
 #call JT-WRS REST endpoint: /workflows/{owner_name}/{workflow_name}/{workflow_version}/_job_execution_plan
 def _get_job_execution_plan(owner_name, workflow_name, workflow_verion, jobjson):
-    request_url = '%s/workflows/%s/%s/%s/_job_execution_plan' % (WRS_URL.strip('/'),
+    request_url = '%s/owner/%s/workflow/%s/ver/%s/job_execution_plan' % (WRS_URL.strip('/'),
                                                                  owner_name, workflow_name, workflow_verion)
     try:
         r = requests.put(request_url, json=jobjson)
@@ -404,7 +404,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
 
 def complete_task(owner_name, job_queue_id, job_id, task_name, result):
     jobs = get_jobs(owner_name, job_queue_id, job_id, 'running')
-    print(jobs)
+    #print(jobs)
     if not jobs:
         # raise JobNotFound error here
         return

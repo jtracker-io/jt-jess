@@ -104,6 +104,14 @@ def get_job_queues2(owner_name, workflow_name):
     return workflows or ('No workflow job queue found', 404)
 
 
+def get_job_queues3(job_queue_id):
+    pass
+
+
+def get_job_queues4(owner_name, job_queue_id):
+    pass
+
+
 def get_job_summary(owner_name, job_queue_id):
     pass
 
