@@ -7,8 +7,8 @@ from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRS
 
 # settings, need to move out to config
 
-AMS_URL = 'http://localhost:1206/api/jt-ams/v0.1'
-WRS_URL = 'http://localhost:1207/api/jt-wrs/v0.1'
+AMS_URL = 'http://localhost:12012/api/jt-ams/v0.1'
+WRS_URL = 'http://localhost:12015/api/jt-wrs/v0.1'
 JESS_ETCD_ROOT = '/jthub:jes'
 
 etcd_client = etcd3.client()
