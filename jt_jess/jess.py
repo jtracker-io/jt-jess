@@ -57,17 +57,17 @@ def _get_job_execution_plan(owner_name, workflow_name, workflow_verion, job_json
     return json.loads(r.text)
 
 
-def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workflow_owner_name=None, job_queue_id=None):
+def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_owner_name=None, queue_id=None):
     owner_id = _get_owner_id_by_name(owner_name)
-    job_queues = []
+    queues = []
 
     if owner_id:
         # find the workflows' name and id first
-        job_queues_prefix = '/'.join([JESS_ETCD_ROOT,
+        queues_prefix = '/'.join([JESS_ETCD_ROOT,
                                             'owner.id:%s' % owner_id,
                                             'workflow.id:'])
 
-        r = etcd_client.get_prefix(key_prefix=job_queues_prefix)
+        r = etcd_client.get_prefix(key_prefix=queues_prefix)
 
         for value, meta in r:
             k = meta.key.decode('utf-8').replace(JESS_ETCD_ROOT + '/', '', 1)
@@ -81,10 +81,10 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
             if not k.endswith('/id'):
                 continue
 
-            if job_queue_id and v != job_queue_id:  # get only specified job queue
+            if queue_id and v != queue_id:  # get only specified job queue
                 continue
 
-            job_queue = {
+            queue = {
                 'id': v,
                 'owner.name': owner_name
             }
@@ -94,10 +94,10 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
                     continue
                 if ':' in new_k_vs:
                     new_k, new_v = new_k_vs.split(':', 1)
-                    job_queue[new_k] = new_v
+                    queue[new_k] = new_v
 
             try:
-                workflow = _get_workflow_by_id(job_queue.get('workflow.id'), workflow_version)
+                workflow = _get_workflow_by_id(queue.get('workflow.id'), workflow_version)
             except WorklowNotFound:
                 continue
             except WRSNotAvailable:
@@ -107,37 +107,37 @@ def get_job_queues(owner_name, workflow_name=None, workflow_version=None, workfl
                     or (workflow_name and workflow_name != workflow.get('name')):
                 continue
 
-            job_queue['workflow.name'] = workflow.get('name')
-            job_queue['workflow_owner.id'] = workflow.get('owner.id')
-            job_queue['workflow_owner.name'] = workflow.get('owner.name')
+            queue['workflow.name'] = workflow.get('name')
+            queue['workflow_owner.id'] = workflow.get('owner.id')
+            queue['workflow_owner.name'] = workflow.get('owner.name')
 
-            job_queues.append(job_queue)
+            queues.append(queue)
 
-        return job_queues
+        return queues
     else:
         raise OwnerNameNotFound(Exception("Specific owner name not found: %s" % owner_name))
 
 
-def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
+def get_jobs(owner_name, queue_id, job_id=None, state=None):
     owner_id = _get_owner_id_by_name(owner_name)
     jobs = []
 
     if owner_id:
         r0 = etcd_client.get('/'.join([JESS_ETCD_ROOT,
-                                            'job_queue.id:%s' % job_queue_id, 'owner.id']))
+                                            'job_queue.id:%s' % queue_id, 'owner.id']))
 
         if r0 and r0[0] and owner_id != r0[0].decode("utf-8"):  # specified job queue does not belong to the specified owner
             return
 
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
-                                            'job_queue.id:%s' % job_queue_id,
+                                            'job_queue.id:%s' % queue_id,
                                             'job@jobs/state:%s' % ('' if state is None else state + '/')])
 
         r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
 
         for value, meta in r:
             k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
-                                            'job_queue.id:%s' % job_queue_id,
+                                            'job_queue.id:%s' % queue_id,
                                             'job@jobs/']), '', 1)
             try:
                 v = value.decode("utf-8")
@@ -160,7 +160,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
                 continue
 
             tasks_prefix = '/'.join([JESS_ETCD_ROOT,
-                                    'job_queue.id:%s' % job_queue_id,
+                                    'job_queue.id:%s' % queue_id,
                                     'job.id:%s' % job['id'],
                                     'task@tasks/name:'])
 
@@ -171,7 +171,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
             root = set([''])
             for value, meta in r1:
                 k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
-                                                               'job_queue.id:%s' % job_queue_id,
+                                                               'job_queue.id:%s' % queue_id,
                                                                'job.id:%s/task@tasks/' % job['id']]), '', 1)
                 try:
                     v = value.decode("utf-8")
@@ -223,14 +223,14 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
             return jobs
 
 
-def enqueue_job(owner_name, job_queue_id, job_json):
+def enqueue_job(owner_name, queue_id, job_json):
     # get workflow information first
-    job_queues = get_job_queues(owner_name, job_queue_id=job_queue_id)
+    queues = get_queues(owner_name, queue_id=queue_id)
 
-    if job_queues: # should only have one queue with the specified ID
-        workflow_owner = job_queues[0].get('workflow_owner.name')
-        workflow_name = job_queues[0].get('workflow.name')
-        workflow_version = job_queues[0].get('workflow.ver')
+    if queues: # should only have one queue with the specified ID
+        workflow_owner = queues[0].get('workflow_owner.name')
+        workflow_name = queues[0].get('workflow.name')
+        workflow_version = queues[0].get('workflow.ver')
 
         # later we may enable the support that job name must be globally unique
 
@@ -240,20 +240,20 @@ def enqueue_job(owner_name, job_queue_id, job_json):
             job_json['id'] = str(uuid.uuid4())
             job_name = job_json['name'] if job_json.get('name') else '_unnamed'
             etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
-                            (JESS_ETCD_ROOT, job_queue_id, job_json['id'], job_name), value=json.dumps(job_json))
+                            (JESS_ETCD_ROOT, queue_id, job_json['id'], job_name), value=json.dumps(job_json))
             for task in job_with_execution_plan.pop('tasks'):
                 etcd_client.put('%s/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file' %
-                                (JESS_ETCD_ROOT, job_queue_id, job_json['id'], task['task']), value=json.dumps(task))
+                                (JESS_ETCD_ROOT, queue_id, job_json['id'], task['task']), value=json.dumps(task))
 
-        return get_jobs(owner_name, job_queue_id, job_json.get('id'))[0]
+        return get_jobs(owner_name, queue_id, job_json.get('id'))[0]
 
 
-def next_task(owner_name, job_queue_id, worker, job_id):
+def next_task(owner_name, queue_id, worker, job_id):
     # verify worker already registered under the job queue
 
     # find candidate job(s)
     # let's check running jobs first
-    jobs = get_jobs(owner_name, job_queue_id, job_id, 'running')
+    jobs = get_jobs(owner_name, queue_id, job_id, 'running')
     if jobs:
         for job in jobs:
             # TODO: put this in a function that can be called from different places
@@ -262,14 +262,14 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 task_to_be_scheduled['job.id'] = job.get('id')
 
                 # using transaction to update job state and task state, return task only when it's success
-                # 1) if job key exists: /jthub:jes/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
-                # 2) if task key exists: /jthub:jes/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
+                # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
+                # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
                 # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
                 # 3) then create new job key and task key, and delete old ones
                 # if precondition fails, return None, ie, no task returned
                 job_etcd_key = '/'.join([
                     JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % job_queue_id,
+                    'job_queue.id:%s' % queue_id,
                     'job@jobs',
                     'state:running',
                     'id:%s' % job.get('id'),
@@ -278,7 +278,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 ])
                 task_etcd_key = '/'.join([
                     JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % job_queue_id,
+                    'job_queue.id:%s' % queue_id,
                     'job.id:%s' % job.get('id'),
                     'task@tasks',
                     'name:%s' % task_to_be_scheduled.get('name'),
@@ -330,7 +330,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 return task_to_be_scheduled
 
     # if no task ready in running jobs, try find in queued jobs
-    jobs = get_jobs(owner_name, job_queue_id, job_id, 'queued')
+    jobs = get_jobs(owner_name, queue_id, job_id, 'queued')
     if jobs:
         for job in jobs:
             for task in job.get('tasks_by_state', {}).get('queued', []):
@@ -338,14 +338,14 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 task_to_be_scheduled['job.id'] = job.get('id')
 
                 # using transaction to update job state and task state, return task only when it's success
-                # 1) if job key exists: /jthub:jes/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
-                # 2) if task key exists: /jthub:jes/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
+                # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
+                # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
                 # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
                 # 3) then create new job key and task key, and delete old ones
                 # if precondition fails, return None, ie, no task returned
                 job_etcd_key = '/'.join([
                     JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % job_queue_id,
+                    'job_queue.id:%s' % queue_id,
                     'job@jobs',
                     'state:queued',
                     'id:%s' % job.get('id'),
@@ -354,7 +354,7 @@ def next_task(owner_name, job_queue_id, worker, job_id):
                 ])
                 task_etcd_key = '/'.join([
                     JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % job_queue_id,
+                    'job_queue.id:%s' % queue_id,
                     'job.id:%s' % job.get('id'),
                     'task@tasks',
                     'name:%s' % task_to_be_scheduled.get('name'),
@@ -403,8 +403,8 @@ def next_task(owner_name, job_queue_id, worker, job_id):
 
                 return task_to_be_scheduled
 
-def complete_task(owner_name, job_queue_id, job_id, task_name, result):
-    jobs = get_jobs(owner_name, job_queue_id, job_id, 'running')
+def complete_task(owner_name, queue_id, job_id, task_name, result):
+    jobs = get_jobs(owner_name, queue_id, job_id, 'running')
     #print(jobs)
     if not jobs:
         # raise JobNotFound error here
@@ -413,7 +413,7 @@ def complete_task(owner_name, job_queue_id, job_id, task_name, result):
     job = jobs[0]
     task_etcd_key = '/'.join([
         JESS_ETCD_ROOT,
-        'job_queue.id:%s' % job_queue_id,
+        'job_queue.id:%s' % queue_id,
         'job.id:%s' % job.get('id'),
         'task@tasks',
         'name:%s' % task_name,
