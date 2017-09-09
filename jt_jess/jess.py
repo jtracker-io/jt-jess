@@ -248,8 +248,8 @@ def enqueue_job(owner_name, queue_id, job_json):
         return get_jobs(owner_name, queue_id, job_json.get('id'))[0]
 
 
-def next_task(owner_name, queue_id, worker, job_id):
-    # verify worker already registered under the job queue
+def next_task(owner_name, queue_id, executor, job_id):
+    # verify executor already registered under the job queue
 
     # find candidate job(s)
     # let's check running jobs first
@@ -324,7 +324,7 @@ def next_task(owner_name, queue_id, worker, job_id):
                     failure=[]
                 )
 
-                # TODO: add worker information in task_file
+                # TODO: add executor information in task_file
 
                 task_to_be_scheduled['state'] = 'running'
                 return task_to_be_scheduled
@@ -399,7 +399,7 @@ def next_task(owner_name, queue_id, worker, job_id):
                 )
 
                 task_to_be_scheduled['state'] = 'running'
-                # TODO: add worker information in task_file
+                # TODO: add executor information in task_file
 
                 return task_to_be_scheduled
 
@@ -433,9 +433,9 @@ def complete_task(owner_name, queue_id, job_id, task_name, result):
     #print(task)
     #print(task_file)
 
-    # TODO: verify worker is the same as expected
+    # TODO: verify executor is the same as expected
 
-    # TODO: update task_file with result reported by worker
+    # TODO: update task_file with result reported by executor
 
     # write the updated task_file back
     new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:completed/')

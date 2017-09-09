@@ -192,80 +192,80 @@ paths:
       responses:
         204:
           description: Action performed
-  /workers/owner/{owner_name}:
+  /executors/owner/{owner_name}:
     get:
-      tags: [Workers]
-      operationId: app.get_workers1
-      summary: Get workers registered for an owner
+      tags: [Executors]
+      operationId: app.get_executors1
+      summary: Get executors registered for an owner
       parameters:
         - $ref: '#/parameters/owner_name'
       responses:
         200:
-          description: Return workers
-  /workers/owner/{owner_name}/worker/{worker_id}:
+          description: Return executors
+  /executors/owner/{owner_name}/executor/{executor_id}:
     get:
-      tags: [Workers]
-      operationId: app.get_workers2
-      summary: Get worker by worker ID registered for an owner
+      tags: [Executors]
+      operationId: app.get_executors2
+      summary: Get executor by executor ID registered for an owner
       parameters:
         - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/worker_id'
+        - $ref: '#/parameters/executor_id'
       responses:
         200:
-          description: Return workers
-  /workers/owner/{owner_name}/queue/{queue_id}:
+          description: Return executors
+  /executors/owner/{owner_name}/queue/{queue_id}:
     get:
-      tags: [Workers]
-      operationId: app.get_workers
-      summary: Get workers registered for a job queue
+      tags: [Executors]
+      operationId: app.get_executors
+      summary: Get executors registered for a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
       responses:
         200:
-          description: Return workers
+          description: Return executors
     post:
-      tags: [Workers]
-      operationId: app.register_worker
-      summary: Register a worker for a job queue
+      tags: [Executors]
+      operationId: app.register_executor
+      summary: Register a executor for a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - name: worker
+        - name: executor
           in: body
           schema:
-            $ref: '#/definitions/Worker'
+            $ref: '#/definitions/Executor'
       responses:
         200:
-          description: Worker registered
-  /workers/owner/{owner_name}/queue/{queue_id}/worker/{worker_id}:
+          description: Executor registered
+  /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:
     get:
-      tags: [Workers]
-      operationId: app.get_worker
-      summary: Get detail of a given worker registered for a job queue
+      tags: [Executors]
+      operationId: app.get_executor
+      summary: Get detail of a given executor registered for a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - $ref: '#/parameters/worker_id'
+        - $ref: '#/parameters/executor_id'
       responses:
         200:
-          description: Return worker
+          description: Return executor
           schema:
-            $ref: '#/definitions/Worker'
-  /workers/owner/{owner_name}/queue/{queue_id}/worker/{worker_id}/action:
+            $ref: '#/definitions/Executor'
+  /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/action:
     put:
-      tags: [Workers]
-      operationId: app.worker_action
-      summary: Perform an action on a worker, eg, pause, resume
+      tags: [Executors]
+      operationId: app.executor_action
+      summary: Perform an action on a executor, eg, pause, resume
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - $ref: '#/parameters/worker_id'
+        - $ref: '#/parameters/executor_id'
         - name: action
           in: body
           required: true
           schema:
-            $ref: '#/definitions/WorkerAction'
+            $ref: '#/definitions/ExecutorAction'
       responses:
         204:
           description: Action performed
@@ -285,11 +285,11 @@ paths:
     put:
       tags: [Tasks]
       operationId: app.next_task
-      summary: Worker asks for the next task to run
+      summary: Executor asks for the next task to run
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - name: worker
+        - name: executor
           in: body
           schema:
             $ref: '#/definitions/TaskFile'
@@ -302,12 +302,12 @@ paths:
     put:
       tags: [Tasks]
       operationId: app.next_task_from_job
-      summary: Worker asks for the next task from a given job to run
+      summary: Executor asks for the next task from a given job to run
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
         - $ref: '#/parameters/job_id'
-        - name: worker
+        - name: executor
           in: body
           schema:
             $ref: '#/definitions/TaskFile'
@@ -320,7 +320,7 @@ paths:
     put:
       tags: [Tasks]
       operationId: app.complete_task
-      summary: Worker reports completion of a task
+      summary: Executor reports completion of a task
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -338,7 +338,7 @@ paths:
     put:
       tags: [Tasks]
       operationId: app.fail_task
-      summary: Worker reports failure of a task
+      summary: Executor reports failure of a task
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -389,9 +389,9 @@ parameters:
     type: string
     required: true
     pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-  worker_id:
-    name: worker_id
-    description: Unique ID for a worker
+  executor_id:
+    name: executor_id
+    description: Unique ID for a executor
     in: path
     type: string
     required: true
@@ -480,7 +480,7 @@ definitions:
         example: "BWA-MEM"
         minLength: 3
         maxLength: 256
-  Worker:
+  Executor:
     type: object
     required:
       - id
@@ -509,7 +509,7 @@ definitions:
         example: "BWA-MEM"
         minLength: 3
         maxLength: 35
-  WorkerAction:
+  ExecutorAction:
     type: object
     required:
       - name

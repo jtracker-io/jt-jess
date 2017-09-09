@@ -23,32 +23,32 @@ def enqueue_job(owner_name, queue_id, jobjson):
     return jt_jess.enqueue_job(owner_name, queue_id, jobjson)
 
 
-def get_workers(owner_name, queue_id):
+def get_executors(owner_name, queue_id):
     pass
 
 
-def get_workers1(owner_name, queue_id):
+def get_executors1(owner_name, queue_id):
     pass
 
 
-def get_workers2(owner_name, queue_id):
+def get_executors2(owner_name, queue_id):
     pass
 
 
-def get_worker(owner_name, queue_id, worker_id):
+def get_executor(owner_name, queue_id, executor_id):
     pass
 
 
-def register_worker(owner_name, queue_id):
+def register_executor(owner_name, queue_id):
     pass
 
 
-def next_task(owner_name, queue_id, worker, job_id=None):
-    return jt_jess.next_task(owner_name, queue_id, worker, job_id)
+def next_task(owner_name, queue_id, executor, job_id=None):
+    return jt_jess.next_task(owner_name, queue_id, executor, job_id)
 
 
-def next_task_from_job(owner_name, queue_id, worker, job_id):
-    return next_task(owner_name, queue_id, worker, job_id)
+def next_task_from_job(owner_name, queue_id, executor, job_id):
+    return next_task(owner_name, queue_id, executor, job_id)
 
 
 def complete_task(owner_name, queue_id, job_id, task_name, result):
@@ -132,7 +132,7 @@ def queue_action(owner_name):
     pass
 
 
-def worker_action(owner_name, queue_id, worker_id):
+def executor_action(owner_name, queue_id, executor_id):
     return
 
 
