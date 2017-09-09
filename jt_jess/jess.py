@@ -42,12 +42,12 @@ def _get_workflow_by_id(workflow_id, workflow_version=None):
     return json.loads(r.text)
 
 
-#call JT-WRS REST endpoint: /workflows/{owner_name}/{workflow_name}/{workflow_version}/_job_execution_plan
-def _get_job_execution_plan(owner_name, workflow_name, workflow_verion, jobjson):
+#call JT-WRS REST endpoint: /workflows/owner/{owner_name}/workflow/{workflow_name}/ver/{workflow_version}/job_execution_plan
+def _get_job_execution_plan(owner_name, workflow_name, workflow_verion, job_json):
     request_url = '%s/workflows/owner/%s/workflow/%s/ver/%s/job_execution_plan' % (WRS_URL.strip('/'),
                                                                  owner_name, workflow_name, workflow_verion)
     try:
-        r = requests.put(request_url, json=jobjson)
+        r = requests.put(request_url, json=job_json)
     except:
         raise WRSNotAvailable('WRS service temporarily unavailable')
 
@@ -155,6 +155,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
                 else:
                     job[new_k_vs] = v
 
+            print(job.get('id'))
             if job_id is not None and job_id != job.get('id'):  # if job_id specified
                 continue
 
@@ -203,7 +204,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
 
             task_lists = {}
             for current_task in nx.topological_sort(G):  # generate a linear task execution plan
-                #print(current_task)
+                print(current_task)
                 if current_task in ('', 'download'):  # TODO: need to deal with gather step that depends on scatter step
                     continue
                 task_state = tasks.get(current_task).get('state')
@@ -222,7 +223,7 @@ def get_jobs(owner_name, job_queue_id, job_id=None, state=None):
             return jobs
 
 
-def enqueue_job(owner_name, job_queue_id, jobjson):
+def enqueue_job(owner_name, job_queue_id, job_json):
     # get workflow information first
     job_queues = get_job_queues(owner_name, job_queue_id=job_queue_id)
 
@@ -233,18 +234,18 @@ def enqueue_job(owner_name, job_queue_id, jobjson):
 
         # later we may enable the support that job name must be globally unique
 
-        job_with_execution_plan = _get_job_execution_plan(workflow_owner, workflow_name, workflow_version, jobjson)
+        job_with_execution_plan = _get_job_execution_plan(workflow_owner, workflow_name, workflow_version, job_json)
 
         if job_with_execution_plan:
-            jobjson['id'] = str(uuid.uuid4())
-            job_name = jobjson['name'] if jobjson.get('name') else '_unnamed'
+            job_json['id'] = str(uuid.uuid4())
+            job_name = job_json['name'] if job_json.get('name') else '_unnamed'
             etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
-                            (JESS_ETCD_ROOT, job_queue_id, jobjson['id'], job_name), value=json.dumps(jobjson))
+                            (JESS_ETCD_ROOT, job_queue_id, job_json['id'], job_name), value=json.dumps(job_json))
             for task in job_with_execution_plan.pop('tasks'):
                 etcd_client.put('%s/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file' %
-                                (JESS_ETCD_ROOT, job_queue_id, jobjson['id'], task['task']), value=json.dumps(task))
+                                (JESS_ETCD_ROOT, job_queue_id, job_json['id'], task['task']), value=json.dumps(task))
 
-        return get_jobs(owner_name, job_queue_id, jobjson.get('id'))[0]
+        return get_jobs(owner_name, job_queue_id, job_json.get('id'))[0]
 
 
 def next_task(owner_name, job_queue_id, worker, job_id):
