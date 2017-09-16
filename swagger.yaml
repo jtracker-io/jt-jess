@@ -140,6 +140,22 @@ paths:
             $ref: '#/definitions/JobJSON'
         409:
           description: Job enqueueing failed
+  /jobs/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:
+    get:
+      tags: [Jobs]
+      operationId: app.get_jobs_by_executor
+      summary: Get jobs in a job queue assigned to an executor
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/queue_id'
+        - $ref: '#/parameters/executor_id'
+        - name: state
+          type: string
+          in: query
+          enum: ['running', 'completed', 'failed', 'paused']  # 'queued' can not be assigned to an executor
+      responses:
+        200:
+          description: Return jobs
   /jobs/owner/{owner_name}/queue/{queue_id}/summary:
     get:
       tags: [Jobs]
@@ -281,7 +297,7 @@ paths:
       responses:
         200:
           description: Return tasks
-  /tasks/owner/{owner_name}/queue/{queue_id}/next_task:
+  /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/next_task:
     put:
       tags: [Tasks]
       operationId: app.next_task
@@ -289,28 +305,10 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - name: executor
-          in: body
-          schema:
-            $ref: '#/definitions/TaskFile'
-      responses:
-        204:
-          description: Task assigned
-        404:
-          description: No task to run
-  /tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}/next_task:
-    put:
-      tags: [Tasks]
-      operationId: app.next_task_from_job
-      summary: Executor asks for the next task from a given job to run
-      parameters:
-        - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/queue_id'
-        - $ref: '#/parameters/job_id'
-        - name: executor
-          in: body
-          schema:
-            $ref: '#/definitions/TaskFile'
+        - $ref: '#/parameters/executor_id'
+        - name: job_id
+          in: query
+          type: string
       responses:
         204:
           description: Task assigned

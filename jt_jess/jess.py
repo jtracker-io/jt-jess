@@ -118,6 +118,42 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
         raise OwnerNameNotFound(Exception("Specific owner name not found: %s" % owner_name))
 
 
+def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
+    # relevant record in ETCD store
+    # /jthub:jes/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/owner.id
+    # /jthub:jes/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/executor@executors/id:d4b319ad-08df-4c0b-9a31-e061e97a7b93
+    # /jthub:jes/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
+
+    owner_id = _get_owner_id_by_name(owner_name)
+    jobs = []
+
+    if owner_id:
+        r0 = etcd_client.get('/'.join([JESS_ETCD_ROOT,
+                                            'job_queue.id:%s' % queue_id, 'owner.id']))
+
+        if r0 and r0[0] and owner_id != r0[0].decode("utf-8"):  # specified job queue does not belong to the specified owner
+            return
+
+        executor = etcd_client.get('/'.join([JESS_ETCD_ROOT,
+                                            'job_queue.id:%s' % queue_id,
+                                            'executor@executors/id:%s' % executor_id]))
+
+        if not executor:
+            return  # incorrect executor_id
+
+        jobs_prefix = '/'.join([JESS_ETCD_ROOT,
+                                            'executor.id:%s' % executor_id,
+                                            'job@%s' % ('' if state is None else '%s_jobs/id:' % state)])
+
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
+
+        for value, meta in r:
+            job_state, job_id = meta.key.decode('utf-8').split('/')[-2:]  # the last one is job ID
+            jobs.append(dict(id=job_id.replace('id:', ''), state=job_state.split('@')[-1].replace('_jobs', '')))
+
+    return jobs
+
+
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
     owner_id = _get_owner_id_by_name(owner_name)
     jobs = []
@@ -248,8 +284,43 @@ def enqueue_job(owner_name, queue_id, job_json):
         return get_jobs(owner_name, queue_id, job_json.get('id'))[0]
 
 
-def next_task(owner_name, queue_id, executor, job_id):
+def register_executor(owner_name, queue_id, executor):
+    owner_id = _get_owner_id_by_name(owner_name)
+    executor_id = executor.get('id')
+
+    if owner_id:
+        r0 = etcd_client.get('/'.join([JESS_ETCD_ROOT,
+                                            'job_queue.id:%s' % queue_id, 'owner.id']))
+
+        if r0 and r0[0] and owner_id != r0[0].decode("utf-8"):  # specified job queue does not belong to the specified owner
+            return
+
+    else:
+        raise Exception('Specified owner name does not exist')
+
+    key = '/'.join([JESS_ETCD_ROOT, 'job_queue.id:%s' % queue_id, 'executor@executors/id:%s' % executor_id])
+    value = json.dumps(executor)
+
+    rv = etcd_client.transaction(
+        compare=[
+            etcd_client.transactions.version(key) > 0,  # test key exists
+        ],
+        success=[],
+        failure=[
+            etcd_client.transactions.put(key, value)
+        ]
+    )
+
+    if rv[0]:  # True for key already exists
+        raise Exception('Specified executor ID: %s already registered' % executor_id)
+    else:  # False for key not exists
+        return 'Executor registered, ID: %s' % executor_id
+
+
+def next_task(owner_name, queue_id, executor_id, job_id):
     # verify executor already registered under the job queue
+
+    # TODO: after assigning a task to an executor, always assign associated job to the executor as well
 
     # find candidate job(s)
     # let's check running jobs first
@@ -325,11 +396,12 @@ def next_task(owner_name, queue_id, executor, job_id):
                 )
 
                 # TODO: add executor information in task_file
+                #       add job ID under the executor
 
                 task_to_be_scheduled['state'] = 'running'
                 return task_to_be_scheduled
 
-    # if no task ready in running jobs, try find in queued jobs
+    # if no task already in running jobs, try find in queued jobs
     jobs = get_jobs(owner_name, queue_id, job_id, 'queued')
     if jobs:
         for job in jobs:
@@ -436,6 +508,8 @@ def complete_task(owner_name, queue_id, job_id, task_name, result):
     # TODO: verify executor is the same as expected
 
     # TODO: update task_file with result reported by executor
+
+    # TODO: if all tasks for the job are completed, the job will be completed, it will be removed from associated executor
 
     # write the updated task_file back
     new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:completed/')

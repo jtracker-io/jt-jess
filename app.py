@@ -11,6 +11,10 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
     return jt_jess.get_jobs(owner_name, queue_id, job_id, state) or ('No job found', 404)
 
 
+def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
+    return jt_jess.get_jobs_by_executor(owner_name, queue_id, executor_id, state=state)
+
+
 def get_job(owner_name, queue_id, job_id, state=None):
     jobs = get_jobs(owner_name, queue_id, job_id, state)
     if jobs:
@@ -39,16 +43,21 @@ def get_executor(owner_name, queue_id, executor_id):
     pass
 
 
-def register_executor(owner_name, queue_id):
-    pass
+def register_executor(owner_name, queue_id, executor=None):
+    if executor is None:
+        executor = dict()
+    if not executor.get('id'):
+        return 'Invalid executor object', 400
+
+    try:
+        rv = jt_jess.register_executor(owner_name, queue_id, executor)
+        return rv, 200
+    except:
+        return 'Failed, please make sure same executor has not been register before', 400
 
 
-def next_task(owner_name, queue_id, executor, job_id=None):
-    return jt_jess.next_task(owner_name, queue_id, executor, job_id)
-
-
-def next_task_from_job(owner_name, queue_id, executor, job_id):
-    return next_task(owner_name, queue_id, executor, job_id)
+def next_task(owner_name, queue_id, executor_id, job_id=None):
+    return jt_jess.next_task(owner_name, queue_id, executor_id, job_id)
 
 
 def complete_task(owner_name, queue_id, job_id, task_name, result):
