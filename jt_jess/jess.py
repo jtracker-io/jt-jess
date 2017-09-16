@@ -191,7 +191,6 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
                 else:
                     job[new_k_vs] = v
 
-            print(job.get('id'))
             if job_id is not None and job_id != job.get('id'):  # if job_id specified
                 continue
 
@@ -204,7 +203,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
 
             tasks = dict()
             G = nx.DiGraph()
-            root = set([''])
+            root = {''}
             for value, meta in r1:
                 k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
                                                                'job_queue.id:%s' % queue_id,
@@ -240,7 +239,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
 
             task_lists = {}
             for current_task in nx.topological_sort(G):  # generate a linear task execution plan
-                print(current_task)
+                #print(current_task)
                 if current_task in ('', 'download'):  # TODO: need to deal with gather step that depends on scatter step
                     continue
                 task_state = tasks.get(current_task).get('state')
@@ -317,163 +316,190 @@ def register_executor(owner_name, queue_id, executor):
         return 'Executor registered, ID: %s' % executor_id
 
 
-def next_task(owner_name, queue_id, executor_id, job_id):
+def next_task(owner_name, queue_id, executor_id, job_id, job_state):
     # verify executor already registered under the job queue
 
     # TODO: after assigning a task to an executor, always assign associated job to the executor as well
-
     # find candidate job(s)
     # let's check running jobs first
-    jobs = get_jobs(owner_name, queue_id, job_id, 'running')
-    if jobs:
-        for job in jobs:
-            # TODO: put this in a function that can be called from different places
-            for task in job.get('tasks_by_state', {}).get('queued', []):
-                task_to_be_scheduled = list(task.values())[0]
-                task_to_be_scheduled['job.id'] = job.get('id')
+    if not job_state or job_state == 'running':
+        # let assume it's for running jobs by the same executor, this disables running the same job by
+        # multiple executors, this advanced feature may need to be supported later
 
-                # using transaction to update job state and task state, return task only when it's success
-                # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
-                # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
-                # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
-                # 3) then create new job key and task key, and delete old ones
-                # if precondition fails, return None, ie, no task returned
-                job_etcd_key = '/'.join([
-                    JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % queue_id,
-                    'job@jobs',
-                    'state:running',
-                    'id:%s' % job.get('id'),
-                    'name:%s' % job.get('name'),
-                    'job_file'
-                ])
-                task_etcd_key = '/'.join([
-                    JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % queue_id,
-                    'job.id:%s' % job.get('id'),
-                    'task@tasks',
-                    'name:%s' % task_to_be_scheduled.get('name'),
-                    'state:queued',
-                    'task_file'
-                ])
-                task_r = etcd_client.get(task_etcd_key)
-                task_file = task_r[0].decode("utf-8")
+        # jobs run by the current executor
+        job_ids = [j.get('id') for j in get_jobs_by_executor(owner_name, queue_id, executor_id, job_state)]
 
-                # TODO: modify task_file as needed
-                # check dependent tasks to see whether they are completed
-                dependency_ready = True
-                depends_on = json.loads(task_file).get('depends_on')
-                dtasks = {}
-                if depends_on:
-                    for dt in depends_on:
-                        dt_name = dt.split('@')[1]
-                        # TODO: deal with gather dependencies later
-                        if dt_name == 'download': continue
+        jobs = get_jobs(owner_name, queue_id, job_id, job_state)  # all running jobs
 
-                        if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
-                            dependency_ready = False
-                            break
-                        dtasks[dt_name] = dt
-
-                if not dependency_ready:
+        if jobs:
+            for job in jobs:
+                if not job.get('id') in job_ids:  # if this running job is not run by the current executor
                     continue
+                # TODO: put this in a function that can be called from different places
+                for task in job.get('tasks_by_state', {}).get('queued', []):
+                    task_to_be_scheduled = list(task.values())[0]
+                    task_to_be_scheduled['job.id'] = job.get('id')
 
-                # TODO: check current task for parameters depending on parent tasks, fetch output from parent tasks as needed
+                    # using transaction to update job state and task state, return task only when it's success
+                    # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
+                    # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
+                    # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
+                    # 3) then create new job key and task key, and delete old ones
+                    # if precondition fails, return None, ie, no task returned
+                    job_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job@jobs',
+                        'state:running',
+                        'id:%s' % job.get('id'),
+                        'name:%s' % job.get('name'),
+                        'job_file'
+                    ])
+                    task_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job.id:%s' % job.get('id'),
+                        'task@tasks',
+                        'name:%s' % task_to_be_scheduled.get('name'),
+                        'state:queued',
+                        'task_file'
+                    ])
+                    task_r = etcd_client.get(task_etcd_key)
+                    task_file = task_r[0].decode("utf-8")
 
+                    # TODO: modify task_file as needed
+                    # check dependent tasks to see whether they are completed
+                    dependency_ready = True
+                    depends_on = json.loads(task_file).get('depends_on')
+                    dtasks = {}
+                    if depends_on:
+                        for dt in depends_on:
+                            dt_name = dt.split('@')[1]
+                            # TODO: deal with gather dependencies later
+                            if dt_name == 'download': continue
 
-                new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
+                            if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
+                                dependency_ready = False
+                                break
+                            dtasks[dt_name] = dt
 
-                etcd_client.transaction(
-                    compare=[
-                        etcd_client.transactions.version(job_etcd_key) > 0,  # test key exists
-                        etcd_client.transactions.version(task_etcd_key) > 0,  # test key exists
-                    ],
-                    success=[
-                        etcd_client.transactions.put(new_task_etcd_key, task_file),
-                        etcd_client.transactions.delete(task_etcd_key),
-                    ],
-                    failure=[]
-                )
+                    if not dependency_ready:
+                        continue
 
-                # TODO: add executor information in task_file
-                #       add job ID under the executor
+                    # TODO: check current task for parameters depending on parent tasks, fetch output from parent tasks as needed
 
-                task_to_be_scheduled['state'] = 'running'
-                return task_to_be_scheduled
+                    new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
-    # if no task already in running jobs, try find in queued jobs
-    jobs = get_jobs(owner_name, queue_id, job_id, 'queued')
-    if jobs:
-        for job in jobs:
-            for task in job.get('tasks_by_state', {}).get('queued', []):
-                task_to_be_scheduled = list(task.values())[0]
-                task_to_be_scheduled['job.id'] = job.get('id')
+                    # add running job to executor
+                    # /jthub:jes/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
+                    exec_job_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'executor.id:%s' % executor_id,
+                        'job@running_jobs',
+                        'id:%s' % job.get('id')
+                    ])
+                    exec_job_etcd_value = ''
 
-                # using transaction to update job state and task state, return task only when it's success
-                # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
-                # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
-                # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
-                # 3) then create new job key and task key, and delete old ones
-                # if precondition fails, return None, ie, no task returned
-                job_etcd_key = '/'.join([
-                    JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % queue_id,
-                    'job@jobs',
-                    'state:queued',
-                    'id:%s' % job.get('id'),
-                    'name:%s' % job.get('name'),
-                    'job_file'
-                ])
-                task_etcd_key = '/'.join([
-                    JESS_ETCD_ROOT,
-                    'job_queue.id:%s' % queue_id,
-                    'job.id:%s' % job.get('id'),
-                    'task@tasks',
-                    'name:%s' % task_to_be_scheduled.get('name'),
-                    'state:queued',
-                    'task_file'
-                ])
+                    etcd_client.transaction(
+                        compare=[
+                            etcd_client.transactions.version(job_etcd_key) > 0,  # test key exists
+                            etcd_client.transactions.version(task_etcd_key) > 0,  # test key exists
+                        ],
+                        success=[
+                            etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
+                            etcd_client.transactions.put(new_task_etcd_key, task_file),
+                            etcd_client.transactions.delete(task_etcd_key),
+                        ],
+                        failure=[]
+                    )
 
-                job_r = etcd_client.get(job_etcd_key)
-                task_r = etcd_client.get(task_etcd_key)
-                job_file = job_r[0].decode("utf-8")
-                task_file = task_r[0].decode("utf-8")
+                    task_to_be_scheduled['state'] = 'running'
+                    return task_to_be_scheduled
 
-                # TODO: modify task_file as needed
-                # check dependent tasks to see whether they are completed
-                dependency_ready = True
-                depends_on = json.loads(task_file).get('depends_on')
-                if depends_on:
-                    for dt in depends_on:
-                        dt_name = dt.split('@')[1]
-                        if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
-                            dependency_ready = False
-                            break
+    if not job_state or job_state == 'queued':
+        # if no task already in running jobs, try find in queued jobs
+        jobs = get_jobs(owner_name, queue_id, job_id, job_state)
+        if jobs:
+            for job in jobs:
+                for task in job.get('tasks_by_state', {}).get('queued', []):
+                    task_to_be_scheduled = list(task.values())[0]
+                    task_to_be_scheduled['job.id'] = job.get('id')
 
-                if not dependency_ready:
-                    continue
+                    # using transaction to update job state and task state, return task only when it's success
+                    # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
+                    # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
+                    # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
+                    # 3) then create new job key and task key, and delete old ones
+                    # if precondition fails, return None, ie, no task returned
+                    job_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job@jobs',
+                        'state:queued',
+                        'id:%s' % job.get('id'),
+                        'name:%s' % job.get('name'),
+                        'job_file'
+                    ])
+                    task_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job.id:%s' % job.get('id'),
+                        'task@tasks',
+                        'name:%s' % task_to_be_scheduled.get('name'),
+                        'state:queued',
+                        'task_file'
+                    ])
 
-                new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')
-                new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
+                    job_r = etcd_client.get(job_etcd_key)
+                    task_r = etcd_client.get(task_etcd_key)
+                    job_file = job_r[0].decode("utf-8")
+                    task_file = task_r[0].decode("utf-8")
 
-                etcd_client.transaction(
-                    compare=[
-                        etcd_client.transactions.version(job_etcd_key) > 0,
-                        etcd_client.transactions.version(task_etcd_key) > 0,
-                    ],
-                    success=[
-                        etcd_client.transactions.put(new_job_etcd_key, job_file),
-                        etcd_client.transactions.delete(job_etcd_key),
-                        etcd_client.transactions.put(new_task_etcd_key, task_file),
-                        etcd_client.transactions.delete(task_etcd_key),
-                    ],
-                    failure=[]
-                )
+                    # TODO: modify task_file as needed
+                    # check dependent tasks to see whether they are completed
+                    dependency_ready = True
+                    depends_on = json.loads(task_file).get('depends_on')
+                    if depends_on:
+                        for dt in depends_on:
+                            dt_name = dt.split('@')[1]
+                            if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
+                                dependency_ready = False
+                                break
 
-                task_to_be_scheduled['state'] = 'running'
-                # TODO: add executor information in task_file
+                    if not dependency_ready:
+                        continue
 
-                return task_to_be_scheduled
+                    new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')
+                    new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
+
+                    # add running job to executor
+                    # /jthub:jes/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
+                    exec_job_etcd_key = '/'.join([
+                        JESS_ETCD_ROOT,
+                        'executor.id:%s' % executor_id,
+                        'job@running_jobs',
+                        'id:%s' % job.get('id')
+                    ])
+                    exec_job_etcd_value = ''
+
+                    etcd_client.transaction(
+                        compare=[
+                            etcd_client.transactions.version(job_etcd_key) > 0,
+                            etcd_client.transactions.version(task_etcd_key) > 0,
+                        ],
+                        success=[
+                            etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
+                            etcd_client.transactions.put(new_job_etcd_key, job_file),
+                            etcd_client.transactions.delete(job_etcd_key),
+                            etcd_client.transactions.put(new_task_etcd_key, task_file),
+                            etcd_client.transactions.delete(task_etcd_key),
+                        ],
+                        failure=[]
+                    )
+
+                    task_to_be_scheduled['state'] = 'running'
+
+                    return task_to_be_scheduled
 
 def complete_task(owner_name, queue_id, job_id, task_name, result):
     jobs = get_jobs(owner_name, queue_id, job_id, 'running')

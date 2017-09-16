@@ -56,8 +56,8 @@ def register_executor(owner_name, queue_id, executor=None):
         return 'Failed, please make sure same executor has not been register before', 400
 
 
-def next_task(owner_name, queue_id, executor_id, job_id=None):
-    return jt_jess.next_task(owner_name, queue_id, executor_id, job_id)
+def next_task(owner_name, queue_id, executor_id, job_id=None, job_state=None):
+    return jt_jess.next_task(owner_name, queue_id, executor_id, job_id, job_state)
 
 
 def complete_task(owner_name, queue_id, job_id, task_name, result):

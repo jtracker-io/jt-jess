@@ -298,7 +298,7 @@ paths:
         200:
           description: Return tasks
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/next_task:
-    put:
+    get:
       tags: [Tasks]
       operationId: app.next_task
       summary: Executor asks for the next task to run
@@ -309,6 +309,10 @@ paths:
         - name: job_id
           in: query
           type: string
+        - name: job_state
+          in: query
+          type: string
+          enum: ['running', 'queued']
       responses:
         204:
           description: Task assigned
