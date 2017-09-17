@@ -155,6 +155,11 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
+    # TODO: have to make it very efficient to find job by ID, can't query all jobs from ETCD then filter the hits
+    #       maybe we can search one job state at a time to get the job with supplied id
+    # Job ETCD key eg: /jthub:jes/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
+    # Using generator will definitely help avoid retrieving all jobs at once, instead we can batch by state first
+    # then by job UUID first two characters, eg, 00, 01, 02 ...
     owner_id = _get_owner_id_by_name(owner_name)
     jobs = []
 
@@ -278,7 +283,7 @@ def enqueue_job(owner_name, queue_id, job_json):
                 etcd_client.put('%s/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file' %
                                 (JESS_ETCD_ROOT, queue_id, job_json['id'], task['task']), value=json.dumps(task))
 
-        return get_jobs(owner_name, queue_id, job_json.get('id'))[0]
+        return {'enqueued': True, 'job.id':job_json.get('id')}
 
 
 def register_executor(owner_name, queue_id, executor):
@@ -326,6 +331,7 @@ def has_next_task(owner_name, queue_id, executor_id, job_id, job_state):
             return True
 
     return False
+
 
 def next_task(owner_name, queue_id, executor_id, job_id, job_state):
     # verify executor already registered under the job queue
