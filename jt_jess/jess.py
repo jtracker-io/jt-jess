@@ -315,8 +315,17 @@ def register_executor(owner_name, queue_id, executor):
 
 
 def has_next_task(owner_name, queue_id, executor_id, job_id, job_state):
-    pass
+    # first find all running jobs for the executor
+    jobs = get_jobs_by_executor(owner_name, queue_id, executor_id, state='running')
+    job_ids = [j.get('id') for j in jobs]
 
+    # if one task is in queued state, return true
+    for job_id in job_ids:
+        job = get_jobs(owner_name, queue_id, job_id)[0]
+        if job.get('tasks_by_state').get('queued', []):
+            return True
+
+    return False
 
 def next_task(owner_name, queue_id, executor_id, job_id, job_state):
     # verify executor already registered under the job queue
@@ -563,7 +572,11 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
     task['state'] = end_state
 
     # update job state after task state change
-    update_job_state(owner_name, queue_id, executor_id, job_id)
+    rv = update_job_state(owner_name, queue_id, executor_id, job_id)
+
+    # TODO: it should be good to log job state change
+    if rv:
+        print(rv)
 
     return task
 
@@ -636,7 +649,7 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
             failure=[]
         )
 
-        return
+        return 'Job Completed'
 
     # if any task is in failed state, the job is failed too
     # update job state of the job itself and the one under any executor that ran any task of the job
@@ -659,4 +672,4 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
             failure=[]
         )
 
-        return
+        return 'Job Failed'
