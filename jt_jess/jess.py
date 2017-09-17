@@ -578,7 +578,7 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
     else:
         job = job[0]
 
-    print(json.dumps(job))
+    #print(json.dumps(job))
 
     # if any task is in running state, do nothing and return
     if job.get('tasks_by_state').get('running', []):
