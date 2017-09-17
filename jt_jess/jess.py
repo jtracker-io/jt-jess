@@ -546,8 +546,6 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
 
     # TODO: update task_file with result reported by executor
 
-    # TODO: if all tasks for the job are completed, the job will be completed, it will be removed from associated executor
-
     # write the updated task_file back
     new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:%s/' % end_state)
 
