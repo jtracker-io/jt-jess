@@ -318,7 +318,28 @@ paths:
           description: Task assigned
         404:
           description: No task to run
-  /tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}/task/{task_name}/task_complete:
+  /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/has_next_task:
+    get:
+      tags: [Tasks]
+      operationId: app.has_next_task
+      summary: Executor asks for the next task to run
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/queue_id'
+        - $ref: '#/parameters/executor_id'
+        - name: job_id
+          in: query
+          type: string
+        - name: job_state
+          in: query
+          type: string
+          enum: ['running', 'queued']
+      responses:
+        204:
+          description: Task assigned
+        404:
+          description: No task to run
+  /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/job/{job_id}/task/{task_name}/task_completed:
     put:
       tags: [Tasks]
       operationId: app.complete_task
@@ -326,6 +347,7 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
+        - $ref: '#/parameters/executor_id'
         - $ref: '#/parameters/job_id'
         - $ref: '#/parameters/task_name'
         - name: result
@@ -336,7 +358,7 @@ paths:
       responses:
         204:
           description: Action performed
-  /tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}/task/{task_name}/task_fail:
+  /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/job/{job_id}/task/{task_name}/task_failed:
     put:
       tags: [Tasks]
       operationId: app.fail_task
@@ -344,6 +366,7 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
+        - $ref: '#/parameters/executor_id'
         - $ref: '#/parameters/job_id'
         - $ref: '#/parameters/task_name'
         - name: result

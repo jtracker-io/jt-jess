@@ -56,16 +56,20 @@ def register_executor(owner_name, queue_id, executor=None):
         return 'Failed, please make sure same executor has not been register before', 400
 
 
+def has_next_task(owner_name, queue_id, executor_id, job_id=None, job_state=None):
+    return jt_jess.has_next_task(owner_name, queue_id, executor_id, job_id, job_state)
+
+
 def next_task(owner_name, queue_id, executor_id, job_id=None, job_state=None):
     return jt_jess.next_task(owner_name, queue_id, executor_id, job_id, job_state)
 
 
-def complete_task(owner_name, queue_id, job_id, task_name, result):
-    return jt_jess.complete_task(owner_name, queue_id, job_id, task_name, result)
+def complete_task(owner_name, queue_id, executor_id, job_id, task_name, result):
+    return jt_jess.end_task(owner_name, queue_id, executor_id, job_id, task_name, result, success=True)
 
 
-def fail_task(owner_name, queue_id, job_id, task_name, result):
-    pass
+def fail_task(owner_name, queue_id, executor_id, job_id, task_name, result):
+    return jt_jess.end_task(owner_name, queue_id, executor_id, job_id, task_name, result, success=False)
 
 
 def get_queues(owner_name, workflow_name=None, workflow_version=None):

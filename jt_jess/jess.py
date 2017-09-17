@@ -168,7 +168,6 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
                                             'job_queue.id:%s' % queue_id,
                                             'job@jobs/state:%s' % ('' if state is None else state + '/')])
-
         r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
 
         for value, meta in r:
@@ -179,7 +178,6 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
                 v = value.decode("utf-8")
             except:
                 v = None  # assume binary value, deal with it later
-
             job = {}
 
             for new_k_vs in k.split('/'):
@@ -316,20 +314,26 @@ def register_executor(owner_name, queue_id, executor):
         return 'Executor registered, ID: %s' % executor_id
 
 
+def has_next_task(owner_name, queue_id, executor_id, job_id, job_state):
+    pass
+
+
 def next_task(owner_name, queue_id, executor_id, job_id, job_state):
     # verify executor already registered under the job queue
 
-    # TODO: after assigning a task to an executor, always assign associated job to the executor as well
+    if job_state is None:
+        job_state = 'running'
+
     # find candidate job(s)
     # let's check running jobs first
-    if not job_state or job_state == 'running':
+    if job_state == 'running':
         # let assume it's for running jobs by the same executor, this disables running the same job by
         # multiple executors, this advanced feature may need to be supported later
 
         # jobs run by the current executor
         job_ids = [j.get('id') for j in get_jobs_by_executor(owner_name, queue_id, executor_id, job_state)]
 
-        jobs = get_jobs(owner_name, queue_id, job_id, job_state)  # all running jobs
+        jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)  # all running jobs
 
         if jobs:
             for job in jobs:
@@ -416,11 +420,13 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state):
                     task_to_be_scheduled['state'] = 'running'
                     return task_to_be_scheduled
 
-    if not job_state or job_state == 'queued':
+    # now look for task in queued jobs
+    if job_state == 'queued':
         # if no task already in running jobs, try find in queued jobs
-        jobs = get_jobs(owner_name, queue_id, job_id, job_state)
+        jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
         if jobs:
             for job in jobs:
+                #print(json.dumps(job))
                 for task in job.get('tasks_by_state', {}).get('queued', []):
                     task_to_be_scheduled = list(task.values())[0]
                     task_to_be_scheduled['job.id'] = job.get('id')
@@ -501,7 +507,12 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state):
 
                     return task_to_be_scheduled
 
-def complete_task(owner_name, queue_id, job_id, task_name, result):
+def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, success):
+    if success:
+        end_state = 'completed'
+    else:
+        end_state = 'failed'
+
     jobs = get_jobs(owner_name, queue_id, job_id, 'running')
     #print(jobs)
     if not jobs:
@@ -538,7 +549,7 @@ def complete_task(owner_name, queue_id, job_id, task_name, result):
     # TODO: if all tasks for the job are completed, the job will be completed, it will be removed from associated executor
 
     # write the updated task_file back
-    new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:completed/')
+    new_task_etcd_key = task_etcd_key.replace('/state:running/', '/state:%s/' % end_state)
 
     etcd_client.transaction(
         compare=[
@@ -551,5 +562,103 @@ def complete_task(owner_name, queue_id, job_id, task_name, result):
         failure=[]
     )
 
-    task['state'] = 'completed'
+    task['state'] = end_state
+
+    # update job state after task state change
+    update_job_state(owner_name, queue_id, executor_id, job_id)
+
     return task
+
+
+def update_job_state(owner_name, queue_id, executor_id, job_id):
+    # get state for every task in the job
+    job = get_jobs(owner_name, queue_id, job_id=job_id, state='running')
+    if not job:
+        return  # something horribly wrong, do nothing for now
+    else:
+        job = job[0]
+
+    print(json.dumps(job))
+
+    # if any task is in running state, do nothing and return
+    if job.get('tasks_by_state').get('running', []):
+        return
+
+    # Example old key:
+    # /jthub:jes
+    # /job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9
+    # /job@jobs
+    # /state:queued
+    # /id:240b9fe6-df94-49f5-8364-6c58a1d4a9cb
+    # /name:_unnamed
+    # /job_file
+    job_etcd_key_old = '/'.join([
+        JESS_ETCD_ROOT,
+        'job_queue.id:%s' % queue_id,
+        'job@jobs',
+        'state:running',
+        'id:%s' % job_id,
+        'name:%s' % job.get('name'),
+        'job_file'
+    ])
+
+    job_r = etcd_client.get(job_etcd_key_old)
+    job_etcd_value_old = job_r[0].decode("utf-8")
+
+    # Example old key
+    # /jthub:jes
+    # /executor.id:f3a00ff7-0685-460f-a0f3-821afae93625
+    # /job@running_jobs
+    # /id:107b1343-591a-4f4a-b867-95cf83d2043d
+    exec_job_etcd_key_old = '/'.join([
+        JESS_ETCD_ROOT,
+        'executor.id:%s' % executor_id,
+        'job@running_jobs',
+        'id:%s' % job_id
+    ])
+
+    # if all tasks are in completed state, the job is completed too
+    # update job state of the job itself and the one under any executor that ran any task of the job
+    if len(job.get('tasks_by_state').get('completed', [])) == len(job.get('tasks_by_name')):
+        job_etcd_key_new = job_etcd_key_old.replace('state:running', 'state:completed')
+        job_etcd_value_new = job_etcd_value_old
+        exec_job_etcd_key_new = exec_job_etcd_key_old.replace('job@running_jobs', 'job@completed_jobs')
+
+        etcd_client.transaction(
+            compare=[
+                etcd_client.transactions.version(job_etcd_key_old) > 0,
+                etcd_client.transactions.version(exec_job_etcd_key_old) > 0,
+            ],
+            success=[
+                etcd_client.transactions.delete(job_etcd_key_old),
+                etcd_client.transactions.put(job_etcd_key_new, job_etcd_value_new),
+                etcd_client.transactions.delete(exec_job_etcd_key_old),
+                etcd_client.transactions.put(exec_job_etcd_key_new, ''),
+            ],
+            failure=[]
+        )
+
+        return
+
+    # if any task is in failed state, the job is failed too
+    # update job state of the job itself and the one under any executor that ran any task of the job
+    if job.get('tasks_by_state').get('failed', []):
+        job_etcd_key_new = job_etcd_key_old.replace('state:running', 'state:failed')
+        job_etcd_value_new = job_etcd_value_old
+        exec_job_etcd_key_new = exec_job_etcd_key_old.replace('job@running_jobs', 'job@failed_jobs')
+
+        etcd_client.transaction(
+            compare=[
+                etcd_client.transactions.version(job_etcd_key_old) > 0,
+                etcd_client.transactions.version(exec_job_etcd_key_old) > 0,
+            ],
+            success=[
+                etcd_client.transactions.delete(job_etcd_key_old),
+                etcd_client.transactions.put(job_etcd_key_new, job_etcd_value_new),
+                etcd_client.transactions.delete(exec_job_etcd_key_old),
+                etcd_client.transactions.put(exec_job_etcd_key_new, ''),
+            ],
+            failure=[]
+        )
+
+        return
