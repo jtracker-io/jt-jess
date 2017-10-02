@@ -3,7 +3,8 @@ import connexion
 import datetime
 import logging
 import jt_jess
-from jt_jess.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable
+from jt_jess.exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable, \
+                               QueueCreationFailure
 from connexion import NoContent
 
 
@@ -27,20 +28,16 @@ def enqueue_job(owner_name, queue_id, jobjson):
     return jt_jess.enqueue_job(owner_name, queue_id, jobjson)
 
 
-def get_executors(owner_name, queue_id):
-    pass
-
-
-def get_executors1(owner_name, queue_id):
-    pass
-
-
-def get_executors2(owner_name, queue_id):
-    pass
+def get_executors(owner_name, queue_id=None, executor_id=None):
+    return jt_jess.get_executors(owner_name, queue_id, executor_id)
 
 
 def get_executor(owner_name, queue_id, executor_id):
-    pass
+    return get_executors(owner_name, queue_id=queue_id, executor_id=executor_id)
+
+
+def get_executor1(owner_name, executor_id):
+    return get_executors(owner_name, executor_id=executor_id)
 
 
 def register_executor(owner_name, queue_id, executor=None):
@@ -72,17 +69,22 @@ def fail_task(owner_name, queue_id, executor_id, job_id, task_name, result):
     return jt_jess.end_task(owner_name, queue_id, executor_id, job_id, task_name, result, success=False)
 
 
-def get_queues(owner_name, workflow_name=None, workflow_version=None):
+def get_queues(owner_name, workflow_name=None, workflow_version=None, queue_id=None):
     if workflow_name and '.' in workflow_name:
         if len(workflow_name.split('.')) > 2:
             return 'Value for workflow name parameter can not have more than two dots (.)', 400
         else:
             workflow_owner_name, workflow_name = workflow_name.split('.')
-    else:
+    elif workflow_name:  # if we have workflow_name, otherwise no need to set it
         workflow_owner_name = owner_name
+    else:
+        workflow_owner_name = None
 
     try:
-        workflows = jt_jess.get_queues(owner_name, workflow_name, workflow_version, workflow_owner_name)
+        workflows = jt_jess.get_queues(owner_name, workflow_name=workflow_name,
+                                       workflow_version=workflow_version,
+                                       workflow_owner_name=workflow_owner_name,
+                                       queue_id=queue_id)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -110,9 +112,9 @@ def get_queues1(owner_name):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_queues2(owner_name, workflow_name):
+def get_queues3(owner_name, workflow_name):
     try:
-        workflows = get_queues(owner_name, workflow_name)
+        workflows = get_queues(owner_name, workflow_name=workflow_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -125,12 +127,19 @@ def get_queues2(owner_name, workflow_name):
     return workflows or ('No workflow job queue found', 404)
 
 
-def get_queues3(queue_id):
-    pass
+def get_queues2(owner_name, queue_id):
+    try:
+        queues = get_queues(owner_name, queue_id=queue_id)
+    except OwnerNameNotFound as err:
+        return str(err), 404
+    except AMSNotAvailable as err:
+        return str(err), 500
+    except WorklowNotFound as err:
+        return str(err), 404
+    except WRSNotAvailable as err:
+        return str(err), 500
 
-
-def get_queues4(owner_name, queue_id):
-    pass
+    return queues or ('No workflow job queue found', 404)
 
 
 def get_job_summary(owner_name, queue_id):
@@ -149,20 +158,29 @@ def executor_action(owner_name, queue_id, executor_id):
     return
 
 
-def register_queue(owner_name, owner_type='org'):
-    exists = jt_jess.get_owner(owner_name)
-    if exists:
-        return NoContent, 409
+def register_queue(owner_name, workflow_name, workflow_version):
+    if workflow_name and '.' in workflow_name:
+        if len(workflow_name.split('.')) > 2:
+            return 'Value for workflow name parameter can not have more than two dots (.)', 400
+        else:
+            workflow_owner_name, workflow_name = workflow_name.split('.')
     else:
-        return jt_jess.create_owner(owner_name, owner_type)
+        workflow_owner_name = owner_name
 
+    try:
+        queue = jt_jess.create_queue(owner_name, workflow_name, workflow_version, workflow_owner_name)
+    except OwnerNameNotFound as err:
+        return str(err), 404
+    except QueueCreationFailure as err:
+        return str(err), 400
+    except AMSNotAvailable as err:
+        return str(err), 500
+    except WorklowNotFound as err:
+        return str(err), 404
+    except WRSNotAvailable as err:
+        return str(err), 500
 
-def register_queue1():
-    pass
-
-
-def get_tasks(owner_name):
-    pass
+    return queue
 
 
 logging.basicConfig(level=logging.INFO)

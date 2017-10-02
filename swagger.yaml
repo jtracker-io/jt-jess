@@ -6,24 +6,11 @@ consumes:
   - application/json
 produces:
   - application/json
-security:
+#security:
   # enable OAuth protection for all REST endpoints
   # (only active if the TOKENINFO_URL environment variable is set)
-  - oauth2: [uid]
+#  - oauth2: [uid]
 paths:
-  /queues/owner/{owner_name}/queue/{queue_id}:
-    get:
-      tags: [Queues]
-      operationId: app.get_queues4
-      summary: Get info for job queue under a given owner and queue_id
-      parameters:
-        - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/queue_id'
-      responses:
-        200:
-          description: Return job queues for the specified owner
-          schema:
-            type: array
   /queues/owner/{owner_name}:
     get:
       tags: [Queues]
@@ -36,10 +23,23 @@ paths:
           description: Return Queues for the specified owner
           schema:
             type: array
-  /queues/owner/{owner_name}/workflow/{workflow_name}:
+  /queues/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Queues]
       operationId: app.get_queues2
+      summary: Get info for job queue under a given owner and queue_id
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/queue_id'
+      responses:
+        200:
+          description: Return job queues for the specified owner
+          schema:
+            type: array
+  /queues/owner/{owner_name}/workflow/{workflow_name}:
+    get:
+      tags: [Queues]
+      operationId: app.get_queues3
       summary: Get all job queues under a given owner and workflow_name
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -65,39 +65,27 @@ paths:
             type: array
     post:
       tags: [Queues]
-      operationId: app.register_queue1
+      operationId: app.register_queue
       summary: Register a job queue under a given owner, workflow_name and version
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/workflow_name'
         - $ref: '#/parameters/workflow_version'
-        - name: queue
-          in: body
-          schema:
-            $ref: '#/definitions/JobQueue'
       responses:
         200:
           description: Workflow created
           schema:
-            $ref: '#/definitions/JobQueue'
+            #$ref: '#/definitions/JobQueue'
+            type: object
         409:
           description: Workflow registration failed
-  /queues/id/{queue_id}:
-    get:
-      tags: [Queues]
-      operationId: app.get_queues3
-      summary: Get job queue info by job queue ID
-      parameters:
-        - $ref: '#/parameters/queue_id'
-      responses:
-        204:
-          description: Action performed
-  /queues/id/{queue_id}/action:
+  /queues/owner/{owner_name}/queue/{queue_id}/action:
     put:
       tags: [Queues]
       operationId: app.queue_action
-      summary: Perform an action on a job queue, eg, pause, resume
+      summary: Perform an action on a job queue, eg, pause, resume (not implemented yet)
       parameters:
+        - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
         - name: action
           in: body
@@ -160,7 +148,7 @@ paths:
     get:
       tags: [Jobs]
       operationId: app.get_job_summary
-      summary: Get summary information on jobs in a job queue
+      summary: Get summary information on jobs in a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -195,7 +183,7 @@ paths:
     put:
       tags: [Jobs]
       operationId: app.job_action
-      summary: Perform an action on a job, eg, pause, resume, cancel ...
+      summary: Perform an action on a job, eg, pause, resume, cancel ... (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -208,32 +196,32 @@ paths:
       responses:
         204:
           description: Action performed
-  /executors/owner/{owner_name}:
-    get:
-      tags: [Executors]
-      operationId: app.get_executors1
-      summary: Get executors registered for an owner
-      parameters:
-        - $ref: '#/parameters/owner_name'
-      responses:
-        200:
-          description: Return executors
+  #/executors/owner/{owner_name}:  # may not need this, should probably always require job queue id
+  #  get:
+  #    tags: [Executors]
+  #    operationId: app.get_executors1
+  #    summary: Get executors registered for an owner
+  #    parameters:
+  #      - $ref: '#/parameters/owner_name'
+  #    responses:
+  #      200:
+  #        description: Return executors
   /executors/owner/{owner_name}/executor/{executor_id}:
     get:
       tags: [Executors]
-      operationId: app.get_executors2
-      summary: Get executor by executor ID registered for an owner
+      operationId: app.get_executor1
+      summary: Get executor by executor ID registered for an owner (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/executor_id'
       responses:
         200:
-          description: Return executors
+          description: Return executor
   /executors/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Executors]
       operationId: app.get_executors
-      summary: Get executors registered for a job queue
+      summary: Get executors registered for a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -258,7 +246,7 @@ paths:
     get:
       tags: [Executors]
       operationId: app.get_executor
-      summary: Get detail of a given executor registered for a job queue
+      summary: Get detail of a given executor registered for a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -272,7 +260,7 @@ paths:
     put:
       tags: [Executors]
       operationId: app.executor_action
-      summary: Perform an action on a executor, eg, pause, resume
+      summary: Perform an action on a executor, eg, pause, resume (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -285,18 +273,18 @@ paths:
       responses:
         204:
           description: Action performed
-  /tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}:  # may not need this, get job should be sufficient
-    get:
-      tags: [Tasks]
-      operationId: app.get_tasks
-      summary: List all tasks for a given job
-      parameters:
-        - $ref: '#/parameters/owner_name'
-        - $ref: '#/parameters/queue_id'
-        - $ref: '#/parameters/job_id'
-      responses:
-        200:
-          description: Return tasks
+  #/tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}:  # may not need this, get job should be sufficient
+  #  get:
+  #    tags: [Tasks]
+  #    operationId: app.get_tasks
+  #    summary: List all tasks for a given job
+  #    parameters:
+  #      - $ref: '#/parameters/owner_name'
+  #      - $ref: '#/parameters/queue_id'
+  #      - $ref: '#/parameters/job_id'
+  #    responses:
+  #      200:
+  #        description: Return tasks
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/next_task:
     get:
       tags: [Tasks]
@@ -322,7 +310,7 @@ paths:
     get:
       tags: [Tasks]
       operationId: app.has_next_task
-      summary: Executor asks for the next task to run
+      summary: Executor asks for whether there is any task to be run
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -335,8 +323,8 @@ paths:
           type: string
           enum: ['running', 'queued']
       responses:
-        204:
-          description: Task assigned
+        200:
+          description: Has next task
         404:
           description: No task to run
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/job/{job_id}/task/{task_name}/task_completed:
@@ -392,7 +380,7 @@ parameters:
     in: path
     type: string
     required: true
-    pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_.]{2,31}$"
+    pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_.]{2,63}$"
   workflow_version:
     name: workflow_version
     description: Workflow's version
@@ -441,21 +429,40 @@ definitions:
   JobQueue:
     type: object
     required:
-      - name
+      - id
     properties:
       id:
         type: string
-        description: Workflow's unique identifier
+        description: Job queue's unique identifier
         pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
         readOnly: true
-      name:
+      queue_owner_name:
         type: string
-        description: Workflow's name
+        description: Job queue owner name
         pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_]{2,31}$"
-        example: "BWA-MEM"
-        minLength: 3
-        maxLength: 32
+        example: "icgc-dcc"
+      workflow_id:
+        type: string
+        description: Workflow's unique identifier
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        example: "67a42260-cf0c-46bc-8809-0eb0e3bfef28"
+        readOnly: true
+      workflow_owner_name:
+        type: string
+        description: Workflow owner name (may be different from queue owner name)
+        pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_]{2,31}$"
+        example: "icgc-dcc"
+      workflow_name:
+        description: Workflow name
+        type: string
+        pattern: "^[a-zA-Z]{1}[a-zA-Z0-9-_.]{2,64}$"
+        example: "pcawg-rna-seq-to-ega-submit-jt"
+      workflow_version:
+        description: Workflow version
+        type: string
+        pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{1,15}$"
+        example: "0.1.13"
       workflow_type:
         type: string
         description: In which language workflow is written

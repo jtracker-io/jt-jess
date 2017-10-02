@@ -2,7 +2,8 @@ __all__ = [
     'OwnerNameNotFound',
     'WorklowNotFound',
     'AMSNotAvailable',
-    'WRSNotAvailable'
+    'WRSNotAvailable',
+    'QueueCreationFailure'
 ]
 
 
@@ -24,3 +25,8 @@ class AMSNotAvailable(Exception):
 class WRSNotAvailable(Exception):
     def __str__(self):
         return 'Workflow Registration Service temporarily not available'
+
+
+class QueueCreationFailure(Exception):
+    def __str__(self):
+        return 'Queue creation failed, job queue for the same workflow may have already been created'
