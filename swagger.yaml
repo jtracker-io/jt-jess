@@ -231,7 +231,7 @@ paths:
     post:
       tags: [Executors]
       operationId: app.register_executor
-      summary: Register a executor for a job queue
+      summary: Register an executor for a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'

@@ -223,7 +223,6 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
             job_state, job_id = meta.key.decode('utf-8').split('/')[-2:]  # the last one is job ID
             jobs.append(dict(id=job_id.replace('id:', ''), state=job_state.split('@')[-1].replace('_jobs', '')))
 
-
     return jobs
 
 
@@ -626,6 +625,11 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
     task_r = etcd_client.get(task_etcd_key)
     try:
         task_file = task_r[0].decode("utf-8")
+        task_dict = json.loads(task_file)
+        if 'output' not in task_dict:
+            task_dict['output'] = []
+        task_dict['output'].append(result)
+
     except:
         # raise TaskNotFound or TaskNotInRunningState
         return
@@ -645,7 +649,7 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
             etcd_client.transactions.version(task_etcd_key) > 0,
         ],
         success=[
-            etcd_client.transactions.put(new_task_etcd_key, task_file),
+            etcd_client.transactions.put(new_task_etcd_key, json.dumps(task_dict)),
             etcd_client.transactions.delete(task_etcd_key),
         ],
         failure=[]
