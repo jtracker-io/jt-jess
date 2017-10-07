@@ -35,7 +35,7 @@ paths:
         200:
           description: Return job queues for the specified owner
           schema:
-            type: array
+            type: object
   /queues/owner/{owner_name}/workflow/{workflow_name}:
     get:
       tags: [Queues]

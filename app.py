@@ -81,7 +81,7 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, queue_id=N
         workflow_owner_name = None
 
     try:
-        workflows = jt_jess.get_queues(owner_name, workflow_name=workflow_name,
+        queues = jt_jess.get_queues(owner_name, workflow_name=workflow_name,
                                        workflow_version=workflow_version,
                                        workflow_owner_name=workflow_owner_name,
                                        queue_id=queue_id)
@@ -94,12 +94,12 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, queue_id=N
     except WRSNotAvailable as err:
         return str(err), 500
 
-    return workflows or ('No workflow job queue found', 404)
+    return queues or ('No workflow job queue found', 404)
 
 
 def get_queues1(owner_name):
     try:
-        workflows = get_queues(owner_name)
+        queues = get_queues(owner_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -109,12 +109,12 @@ def get_queues1(owner_name):
     except WRSNotAvailable as err:
         return str(err), 500
 
-    return workflows or ('No workflow job queue found', 404)
+    return queues or ('No workflow job queue found', 404)
 
 
 def get_queues3(owner_name, workflow_name):
     try:
-        workflows = get_queues(owner_name, workflow_name=workflow_name)
+        queues = get_queues(owner_name, workflow_name=workflow_name)
     except OwnerNameNotFound as err:
         return str(err), 404
     except AMSNotAvailable as err:
@@ -124,10 +124,10 @@ def get_queues3(owner_name, workflow_name):
     except WRSNotAvailable as err:
         return str(err), 500
 
-    return workflows or ('No workflow job queue found', 404)
+    return queues or ('No workflow job queue found', 404)
 
 
-def get_queues2(owner_name, queue_id):
+def get_queues2(owner_name, queue_id=None):
     try:
         queues = get_queues(owner_name, queue_id=queue_id)
     except OwnerNameNotFound as err:
@@ -138,6 +138,9 @@ def get_queues2(owner_name, queue_id):
         return str(err), 404
     except WRSNotAvailable as err:
         return str(err), 500
+
+    if queue_id:
+        return queues[0] if queues else ('No workflow job queue found', 404)
 
     return queues or ('No workflow job queue found', 404)
 

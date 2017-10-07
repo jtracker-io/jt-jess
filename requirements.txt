@@ -1,4 +1,4 @@
 connexion>=1.0.31
 gevent>=1.1b1
-etcd3>=0.6.2
+etcd3>=0.7.0
 networkx>=1.11
