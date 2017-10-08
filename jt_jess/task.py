@@ -17,7 +17,7 @@ etcd_client = etcd3.client(host=JESS_ETCD_HOST, port=JESS_ETCD_PORT,
            user=None, password=None)
 
 
-def has_next_task(owner_name, queue_id, executor_id, job_id, job_state):
+def has_next_task(owner_name, queue_id, executor_id):
     # first find all running jobs for the executor
     jobs = get_jobs_by_executor(owner_name, queue_id, executor_id, state='running')
     job_ids = [j.get('id') for j in jobs]
@@ -31,28 +31,31 @@ def has_next_task(owner_name, queue_id, executor_id, job_id, job_state):
     return False
 
 
-def next_task(owner_name, queue_id, executor_id, job_id, job_state):
-    # verify executor already registered under the job queue
-
-    if job_state is None:
-        job_state = 'running'
+def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
+    # TODO: verify executor already registered under the job queue
+    #       get endpoint for executor has not implemented yet
 
     # find candidate job(s)
     # let's check running jobs first
-    if job_state == 'running':
+    if True: # job_state == 'running':
         # let assume it's for running jobs by the same executor, this disables running the same job by
         # multiple executors, this advanced feature may need to be supported later
 
+        jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
+        if not jobs:
+            return
+
         # jobs run by the current executor
-        job_ids = [j.get('id') for j in get_jobs_by_executor(owner_name, queue_id, executor_id, job_state)]
+        if job_state == 'running':
+            job_ids = [j.get('id') for j in get_jobs_by_executor(owner_name, queue_id, executor_id, job_state)]
+            new_jobs = [j for j in jobs if j['id'] in job_ids]
+            jobs = new_jobs
 
-        jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)  # all running jobs
+        if not jobs:
+            return
 
-        if jobs:
+        if True: # jobs:
             for job in jobs:
-                if not job.get('id') in job_ids:  # if this running job is not run by the current executor
-                    continue
-                # TODO: put this in a function that can be called from different places
                 for task in job.get('tasks_by_state', {}).get('queued', []):
                     task_to_be_scheduled = list(task.values())[0]
                     task_to_be_scheduled['job.id'] = job.get('id')
@@ -67,7 +70,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state):
                         JESS_ETCD_ROOT,
                         'job_queue.id:%s' % queue_id,
                         'job@jobs',
-                        'state:running',
+                        'state:%s' % job_state,
                         'id:%s' % job.get('id'),
                         'name:%s' % job.get('name'),
                         'job_file'
@@ -88,23 +91,31 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state):
                     # check dependent tasks to see whether they are completed
                     dependency_ready = True
                     depends_on = json.loads(task_file).get('depends_on')
-                    dtasks = {}
                     if depends_on:
                         for dt in depends_on:
                             dt_name = dt.split('@')[1]
-                            # TODO: deal with gather dependencies later
-                            if dt_name == 'download': continue
+                            print(dt_name)
+                            # latter is for 'gather' task
+                            for d_task_name in job.get('tasks_by_name'):
+                                if not (d_task_name == dt_name or dt_name.startswith('%s.' % d_task_name)):
+                                    continue
 
-                            if job.get('tasks_by_name').get(dt_name).get('state') != 'completed':
-                                dependency_ready = False
+                                if job.get('tasks_by_name').get(d_task_name).get('state') != 'completed':
+                                    dependency_ready = False
+                                    break
+
+                            if not dependency_ready:  # if one is not ready, no need to check more
                                 break
-                            dtasks[dt_name] = dt
 
-                    if not dependency_ready:
+                    if not dependency_ready:  # if the current task's dependency is not satisfied
                         continue
 
                     # TODO: check current task for parameters depending on parent tasks, fetch output from parent tasks as needed
 
+                    job_r = etcd_client.get(job_etcd_key)
+                    job_file = job_r[0].decode("utf-8")
+
+                    new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')  # if match
                     new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
                     # add running job to executor
@@ -117,24 +128,40 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state):
                     ])
                     exec_job_etcd_value = ''
 
-                    etcd_client.transaction(
-                        compare=[
-                            etcd_client.transactions.version(job_etcd_key) > 0,  # test key exists
-                            etcd_client.transactions.version(task_etcd_key) > 0,  # test key exists
-                        ],
-                        success=[
-                            etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
-                            etcd_client.transactions.put(new_task_etcd_key, task_file),
-                            etcd_client.transactions.delete(task_etcd_key),
-                        ],
-                        failure=[]
-                    )
+                    if job_state == 'running':  # no need to change job file
+                        etcd_client.transaction(
+                            compare=[
+                                etcd_client.transactions.version(job_etcd_key) > 0,  # test key exists
+                                etcd_client.transactions.version(task_etcd_key) > 0,  # test key exists
+                            ],
+                            success=[
+                                etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
+                                etcd_client.transactions.put(new_task_etcd_key, task_file),
+                                etcd_client.transactions.delete(task_etcd_key),
+                            ],
+                            failure=[]
+                        )
+                    else:  # need to change job file key by adding new and removing old
+                        etcd_client.transaction(
+                            compare=[
+                                etcd_client.transactions.version(job_etcd_key) > 0,  # test key exists
+                                etcd_client.transactions.version(task_etcd_key) > 0,  # test key exists
+                            ],
+                            success=[
+                                etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
+                                etcd_client.transactions.put(new_job_etcd_key, job_file),
+                                etcd_client.transactions.delete(job_etcd_key),
+                                etcd_client.transactions.put(new_task_etcd_key, task_file),
+                                etcd_client.transactions.delete(task_etcd_key),
+                            ],
+                            failure=[]
+                        )
 
                     task_to_be_scheduled['state'] = 'running'
                     return task_to_be_scheduled
 
     # now look for task in queued jobs
-    if job_state == 'queued':
+    if False:  # job_state == 'queued':
         # if no task already in running jobs, try find in queued jobs
         jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
         if jobs:
@@ -285,9 +312,7 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
     rv = update_job_state(owner_name, queue_id, executor_id, job_id)
 
     # TODO: it should be good to log job state change
-    if rv:
-        print(rv)
+    #if rv:
+    #    print(rv)
 
     return task
-
-

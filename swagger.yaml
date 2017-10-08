@@ -294,18 +294,17 @@ paths:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
         - $ref: '#/parameters/executor_id'
-        - name: job_id
-          in: query
-          type: string
         - name: job_state
           in: query
           type: string
+          required: true
           enum: ['running', 'queued']
+        - name: job_id
+          in: query
+          type: string
       responses:
-        204:
-          description: Task assigned
-        404:
-          description: No task to run
+        200:
+          description: Task assigned or No task to run
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/has_next_task:
     get:
       tags: [Tasks]
@@ -315,13 +314,6 @@ paths:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
         - $ref: '#/parameters/executor_id'
-        - name: job_id
-          in: query
-          type: string
-        - name: job_state
-          in: query
-          type: string
-          enum: ['running', 'queued']
       responses:
         200:
           description: Has next task
