@@ -1,6 +1,8 @@
-import uuid
+import re
 import json
 import etcd3
+
+from .exceptions import ParentTaskError
 
 from .job import get_jobs
 from .job import get_jobs_by_executor
@@ -109,6 +111,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                 continue
 
             # TODO: check current task for parameters depending on parent tasks, fetch output from parent tasks as needed
+            task_file = _populate_task_input_params(job, task_file)
 
             job_r = etcd_client.get(job_etcd_key)
             job_file = job_r[0].decode("utf-8")
@@ -227,3 +230,34 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
     #    print(rv)
 
     return task
+
+
+def _populate_task_input_params(job, task_file):
+    task = json.loads(task_file)
+    # iterate through parent tasks
+    for key in task.get('input', {}):  # a task may not have input
+        value = task.get('input').get(key)
+        if not isinstance(value, str):
+            continue
+
+        m = re.search(r"{{([\w.]+)@([\w.]+)}}", value)
+        if m:
+            pkey = m.group(1)  # parent output key
+            ptask = m.group(2)  # parent task name, TODO: for 'gather' task, this will refer to multiple tasks
+
+            ptask_file_str = job.get('tasks_by_name').get(ptask, {}).get('task_file', '{}')
+            ptask_output = json.loads(ptask_file_str).get('output', [])
+            if ptask_output:
+                # get the last output since a task may have run multiple times
+                if pkey in ptask_output[-1]:
+                    new_value = ptask_output[-1].get(pkey)  # handle 'gather' task later
+                else:
+                    raise ParentTaskError("Parent task '%s' in job '%s' misses output parameter '%s'" % (
+                        ptask, job.get('id'), pkey
+                    ))
+            else:  # this should never happens
+                raise ParentTaskError("Parent task '%s' in job '%s' misses output" % (ptask, job.get('id')))
+
+            task['input'][key] = new_value
+
+    return json.dumps(task)

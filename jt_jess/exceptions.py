@@ -3,8 +3,14 @@ __all__ = [
     'WorklowNotFound',
     'AMSNotAvailable',
     'WRSNotAvailable',
-    'QueueCreationFailure'
+    'QueueCreationFailure',
+    'ParentTaskError'
 ]
+
+
+class ParentTaskError(Exception):
+    def __str__(self):
+        return 'Problem found in parent task: %s' % (self.args[0])
 
 
 class OwnerNameNotFound(Exception):
