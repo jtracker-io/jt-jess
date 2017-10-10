@@ -20,9 +20,9 @@ etcd_client = etcd3.client(host=JESS_ETCD_HOST, port=JESS_ETCD_PORT,
 
 def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
     # relevant record in ETCD store
-    # /jthub:jes/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/owner.id
-    # /jthub:jes/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/executor@executors/id:d4b319ad-08df-4c0b-9a31-e061e97a7b93
-    # /jthub:jes/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
+    # /jt:jess/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/owner.id
+    # /jt:jess/job_queue.id:1922f389-0673-4b71-ae7e-2ca0f86c6d0e/executor@executors/id:d4b319ad-08df-4c0b-9a31-e061e97a7b93
+    # /jt:jess/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
 
     owner_id = get_owner_id_by_name(owner_name)
     jobs = []
@@ -58,7 +58,7 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
     # TODO: have to make it very efficient to find job by ID, can't query all jobs from ETCD then filter the hits
     #       maybe we can search one job state at a time to get the job with supplied id
-    # Job ETCD key eg: /jthub:jes/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
+    # Job ETCD key eg: /jt:jess/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
     # Using generator will definitely help avoid retrieving all jobs at once, instead we can batch by state first
     # then by job UUID first two characters, eg, 00, 01, 02 ...
     owner_id = get_owner_id_by_name(owner_name)
@@ -203,7 +203,7 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
         return
 
     # Example old key:
-    # /jthub:jes
+    # /jt:jess
     # /job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9
     # /job@jobs
     # /state:queued
@@ -224,7 +224,7 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
     job_etcd_value_old = job_r[0].decode("utf-8")
 
     # Example old key
-    # /jthub:jes
+    # /jt:jess
     # /executor.id:f3a00ff7-0685-460f-a0f3-821afae93625
     # /job@running_jobs
     # /id:107b1343-591a-4f4a-b867-95cf83d2043d

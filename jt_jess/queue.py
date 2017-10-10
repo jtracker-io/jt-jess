@@ -34,7 +34,7 @@ def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_nam
     queue_id = str(uuid.uuid4())
 
     # save to etcd
-    # /jthub:jes/owner.id:1097accf-601c-4f9f-88b0-031ec231f9e2/workflow.id:7e7cf044-c7ea-4d84-aafc-eb6ad438ca0e/workflow.ver:0.2.0/job_queue@job_queues/
+    # /jt:jess/owner.id:1097accf-601c-4f9f-88b0-031ec231f9e2/workflow.id:7e7cf044-c7ea-4d84-aafc-eb6ad438ca0e/workflow.ver:0.2.0/job_queue@job_queues/
     queue_etcd_key = '/'.join([JESS_ETCD_ROOT,
                               'owner.id:%s' % owner_id,
                               'workflow.id:%s' % workflow.get('id'),
@@ -42,7 +42,7 @@ def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_nam
                               'job_queue@job_queues/id'  # one job queue for each workflow for now, more queues maybe allowed later
                               ])
 
-    # /jthub:jes/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/owner.id
+    # /jt:jess/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/owner.id
     queue_owner_etcd_key = '/'.join([
         JESS_ETCD_ROOT,
         'job_queue.id:%s' % queue_id,

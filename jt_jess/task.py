@@ -61,8 +61,8 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
             task_to_be_scheduled['job.id'] = job.get('id')
 
             # using transaction to update job state and task state, return task only when it's success
-            # 1) if job key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
-            # 2) if task key exists: /jthub:jes/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
+            # 1) if job key exists: /jt:jess/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job@jobs/state:queued/id:d66b3f18-834a-4129-9d4c-9af975afee44/name:first_job/job_file
+            # 2) if task key exists: /jt:jess/queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/job.id:d66b3f18-834a-4129-9d4c-9af975afee44/task@tasks/name:prepare_metadata_xml/state:queued/task_file
             # 2.5) look for depends_on tasks (if any), and copy over their output to current task's input
             # 3) then create new job key and task key, and delete old ones
             # if precondition fails, return None, ie, no task returned
@@ -120,7 +120,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
             new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
             # add running job to executor
-            # /jthub:jes/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
+            # /jt:jess/executor.id:d4b319ad-08df-4c0b-9a31-e061e97a7b93/job@running_jobs/id:0d912b9d-565e-4330-8c36-7b727c8d10a4
             exec_job_etcd_key = '/'.join([
                 JESS_ETCD_ROOT,
                 'executor.id:%s' % executor_id,
