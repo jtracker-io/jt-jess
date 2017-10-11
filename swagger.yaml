@@ -120,12 +120,12 @@ paths:
         - name: jobjson
           in: body
           schema:
-            $ref: '#/definitions/JobJSON'
+            type: object
       responses:
         200:
           description: Job enqueued
           schema:
-            $ref: '#/definitions/JobJSON'
+            type: object
         409:
           description: Job enqueueing failed
   /jobs/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:

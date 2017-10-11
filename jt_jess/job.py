@@ -173,6 +173,7 @@ def enqueue_job(owner_name, queue_id, job_json):
         workflow_version = queues[0].get('workflow.ver')
 
         # later we may enable the support that job name must be globally unique
+        # TODO: validate Job JSON
 
         job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, job_json)
 
