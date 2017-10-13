@@ -150,8 +150,14 @@ def get_job_summary(owner_name, queue_id):
     pass
 
 
-def job_action(owner_name):
-    pass
+def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
+    if action is None:
+        action = dict()
+
+    if action.get('action') == 'cancel':
+        # only 'suspended', 'queued' and 'running' jobs can be cancelled
+        # no effect on a job that is 'cancelled' or 'failed'
+        pass
 
 
 def queue_action(owner_name):

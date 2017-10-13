@@ -554,21 +554,20 @@ definitions:
   JobAction:
     type: object
     required:
-      - name
+      - action
     properties:
-      id:
+      action:
         type: string
-        description: Workflow's unique identifier
+        description: Action on job
+        enum: ["cancel", "resume", "suspend"]
+      executor_id:
+        type: string
+        description: Executor ID if it's requested by an executor
         pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
-        readOnly: true
-      name:
+      user_id:
         type: string
-        description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
-        example: "BWA-MEM"
-        minLength: 3
-        maxLength: 35
+        description: User account ID if it's requested by a user
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
   TaskAction:
     type: object
     required:
