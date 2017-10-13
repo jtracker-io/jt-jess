@@ -282,3 +282,84 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
 
         return 'Job Failed'
 
+
+# needs to revisit this function later, it seems not the best solution
+# one case to consider is what if there are tasks belonging to this job are still running
+def stop_job(owner_name=None, action_type=None, queue_id=None,
+                         job_id=None, executor_id=None, user_id=None):
+
+    if action_type not in ('cancel', 'suspend'):
+        return "Unrecognized action"
+
+    # get the job first
+    job = None
+    if executor_id and not user_id:  # requested from an executor to cancel a job
+        job = get_jobs(owner_name, queue_id, job_id=job_id, state='running')
+        if job:
+            job = job[0]
+        else:
+            return 'Specified job is not running'  # do nothing for now
+    elif not executor_id and user_id:
+        return 'Not implemented yet'
+    else:
+        return 'Must specify either executor_id or user_id'
+
+    # print(json.dumps(job))
+
+    # Example old key:
+    # /jt:jess
+    # /job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9
+    # /job@jobs
+    # /state:queued
+    # /id:240b9fe6-df94-49f5-8364-6c58a1d4a9cb
+    # /name:_unnamed
+    # /job_file
+    job_etcd_key_old = '/'.join([
+        JESS_ETCD_ROOT,
+        'job_queue.id:%s' % queue_id,
+        'job@jobs',
+        'state:running',
+        'id:%s' % job_id,
+        'name:%s' % job.get('name'),
+        'job_file'
+    ])
+
+    job_r = etcd_client.get(job_etcd_key_old)
+    job_etcd_value_old = job_r[0].decode("utf-8")
+
+    # Example old key
+    # /jt:jess
+    # /executor.id:f3a00ff7-0685-460f-a0f3-821afae93625
+    # /job@running_jobs
+    # /id:107b1343-591a-4f4a-b867-95cf83d2043d
+    exec_job_etcd_key_old = '/'.join([
+        JESS_ETCD_ROOT,
+        'executor.id:%s' % executor_id,
+        'job@running_jobs',
+        'id:%s' % job_id
+    ])
+
+    if action_type == 'cancel':
+        new_state = 'cancelled'
+    elif action_type == 'suspend':
+        new_state = 'suspended'
+
+    job_etcd_key_new = job_etcd_key_old.replace('state:running', 'state:%s' % new_state)
+    job_etcd_value_new = job_etcd_value_old
+    exec_job_etcd_key_new = exec_job_etcd_key_old.replace('job@running_jobs', 'job@%s_jobs' % new_state)
+
+    etcd_client.transaction(
+        compare=[
+            etcd_client.transactions.version(job_etcd_key_old) > 0,
+            etcd_client.transactions.version(exec_job_etcd_key_old) > 0,
+        ],
+        success=[
+            etcd_client.transactions.delete(job_etcd_key_old),
+            etcd_client.transactions.put(job_etcd_key_new, job_etcd_value_new),
+            etcd_client.transactions.delete(exec_job_etcd_key_old),
+            etcd_client.transactions.put(exec_job_etcd_key_new, ''),
+        ],
+        failure=[]
+    )
+
+    return 'Job %s' % new_state

@@ -154,10 +154,17 @@ def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
     if action is None:
         action = dict()
 
-    if action.get('action') == 'cancel':
+    if action.get('action') in ('cancel', 'suspend'):
         # only 'suspended', 'queued' and 'running' jobs can be cancelled
         # no effect on a job that is 'cancelled' or 'failed'
-        pass
+        executor_id = action.get('executor_id')
+        user_id = action.get('user_id')
+        action_type = action.get('action')
+        return jt_jess.stop_job(owner_name=owner_name, action_type=action_type, queue_id=queue_id,
+                         job_id=job_id, executor_id=executor_id, user_id=user_id)
+
+    else:
+        return 'Not implemented yet', 200
 
 
 def queue_action(owner_name):
