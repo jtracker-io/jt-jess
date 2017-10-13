@@ -159,6 +159,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                 )
 
             task_to_be_scheduled['state'] = 'running'
+            task_to_be_scheduled['task_file'] = task_file  # updated task_file
             return task_to_be_scheduled
 
 
