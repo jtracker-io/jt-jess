@@ -9,7 +9,10 @@ from connexion import NoContent
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
-    return jt_jess.get_jobs(owner_name, queue_id, job_id, state) or ('No job found', 404)
+    try:
+        return jt_jess.get_jobs(owner_name, queue_id, job_id, state) or ('No job found', 404)
+    except Exception as err:
+        return "Error: %s" % err, 400
 
 
 def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
@@ -25,7 +28,11 @@ def get_job(owner_name, queue_id, job_id, state=None):
 
 
 def enqueue_job(owner_name, queue_id, jobjson):
-    return jt_jess.enqueue_job(owner_name, queue_id, jobjson)
+    try:
+        rv = jt_jess.enqueue_job(owner_name, queue_id, jobjson)
+        return rv, 200
+    except Exception as err:
+        return 'Failed: %s' % str(err), 400
 
 
 def get_executors(owner_name, queue_id=None, executor_id=None):

@@ -61,7 +61,11 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
     # Job ETCD key eg: /jt:jess/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
     # Using generator will definitely help avoid retrieving all jobs at once, instead we can batch by state first
     # then by job UUID first two characters, eg, 00, 01, 02 ...
-    owner_id = get_owner_id_by_name(owner_name)
+    try:
+        owner_id = get_owner_id_by_name(owner_name)
+    except Exception as err:
+        raise Exception(str(err))
+
     jobs = []
 
     if owner_id:
@@ -187,6 +191,8 @@ def enqueue_job(owner_name, queue_id, job_json):
                                 (JESS_ETCD_ROOT, queue_id, job_json['id'], task['task']), value=json.dumps(task))
 
         return {'enqueued': True, 'job.id': job_json.get('id')}
+    else:
+        raise Exception('Job enqueue failed, please make sure parameters provided are correct')
 
 
 def update_job_state(owner_name, queue_id, executor_id, job_id):
