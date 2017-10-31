@@ -309,7 +309,7 @@ paths:
     get:
       tags: [Tasks]
       operationId: app.has_next_task
-      summary: Executor asks for whether there is any task to be run
+      summary: Executor asks whether there is any task to be run
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
