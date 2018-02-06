@@ -14,7 +14,7 @@ paths:
   /queues/owner/{owner_name}:
     get:
       tags: [Queues]
-      operationId: app.get_queues1
+      operationId: jt_jess.get_queues1
       summary: Get all job queues under a given owner
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -26,7 +26,7 @@ paths:
   /queues/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Queues]
-      operationId: app.get_queues2
+      operationId: jt_jess.get_queues2
       summary: Get info for job queue under a given owner and queue_id
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -39,7 +39,7 @@ paths:
   /queues/owner/{owner_name}/workflow/{workflow_name}:
     get:
       tags: [Queues]
-      operationId: app.get_queues3
+      operationId: jt_jess.get_queues3
       summary: Get all job queues under a given owner and workflow_name
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -52,7 +52,7 @@ paths:
   /queues/owner/{owner_name}/workflow/{workflow_name}/ver/{workflow_version}:
     get:
       tags: [Queues]
-      operationId: app.get_queues
+      operationId: jt_jess.get_queues
       summary: Get all job queues for given owner, workflow_name and version
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -65,7 +65,7 @@ paths:
             type: array
     post:
       tags: [Queues]
-      operationId: app.register_queue
+      operationId: jt_jess.register_queue
       summary: Register a job queue under a given owner, workflow_name and version
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -82,7 +82,7 @@ paths:
   /queues/owner/{owner_name}/queue/{queue_id}/action:
     put:
       tags: [Queues]
-      operationId: app.queue_action
+      operationId: jt_jess.queue_action
       summary: Perform an action on a job queue, eg, pause, resume (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -98,7 +98,7 @@ paths:
   /jobs/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Jobs]
-      operationId: app.get_jobs
+      operationId: jt_jess.get_jobs
       summary: Get jobs in a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -112,7 +112,7 @@ paths:
           description: Return jobs
     post:
       tags: [Jobs]
-      operationId: app.enqueue_job
+      operationId: jt_jess.enqueue_job
       summary: Enqueue a job in a given job queue
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -131,7 +131,7 @@ paths:
   /jobs/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:
     get:
       tags: [Jobs]
-      operationId: app.get_jobs_by_executor
+      operationId: jt_jess.get_jobs_by_executor
       summary: Get jobs in a job queue assigned to an executor
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -147,7 +147,7 @@ paths:
   /jobs/owner/{owner_name}/queue/{queue_id}/summary:
     get:
       tags: [Jobs]
-      operationId: app.get_job_summary
+      operationId: jt_jess.get_job_summary
       summary: Get summary information on jobs in a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -162,7 +162,7 @@ paths:
   /jobs/owner/{owner_name}/queue/{queue_id}/job/{job_id}:
     get:
       tags: [Jobs]
-      operationId: app.get_job
+      operationId: jt_jess.get_job
       summary: Get detail for a given job
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -182,7 +182,7 @@ paths:
   /jobs/owner/{owner_name}/queue/{queue_id}/job/{job_id}/action:
     put:
       tags: [Jobs]
-      operationId: app.job_action
+      operationId: jt_jess.job_action
       summary: Perform an action on a job, eg, pause, resume, cancel ... (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -199,7 +199,7 @@ paths:
   #/executors/owner/{owner_name}:  # may not need this, should probably always require job queue id
   #  get:
   #    tags: [Executors]
-  #    operationId: app.get_executors1
+  #    operationId: jt_jess.get_executors1
   #    summary: Get executors registered for an owner
   #    parameters:
   #      - $ref: '#/parameters/owner_name'
@@ -209,7 +209,7 @@ paths:
   /executors/owner/{owner_name}/executor/{executor_id}:
     get:
       tags: [Executors]
-      operationId: app.get_executor1
+      operationId: jt_jess.get_executor1
       summary: Get executor by executor ID registered for an owner (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -220,7 +220,7 @@ paths:
   /executors/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Executors]
-      operationId: app.get_executors
+      operationId: jt_jess.get_executors
       summary: Get executors registered for a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -230,7 +230,7 @@ paths:
           description: Return executors
     post:
       tags: [Executors]
-      operationId: app.register_executor
+      operationId: jt_jess.register_executor
       summary: Register an executor for a job queue
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -245,7 +245,7 @@ paths:
   /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:
     get:
       tags: [Executors]
-      operationId: app.get_executor
+      operationId: jt_jess.get_executor
       summary: Get detail of a given executor registered for a job queue (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -259,7 +259,7 @@ paths:
   /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/action:
     put:
       tags: [Executors]
-      operationId: app.executor_action
+      operationId: jt_jess.executor_action
       summary: Perform an action on a executor, eg, pause, resume (not implemented yet)
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -276,7 +276,7 @@ paths:
   #/tasks/owner/{owner_name}/queue/{queue_id}/job/{job_id}:  # may not need this, get job should be sufficient
   #  get:
   #    tags: [Tasks]
-  #    operationId: app.get_tasks
+  #    operationId: jt_jess.get_tasks
   #    summary: List all tasks for a given job
   #    parameters:
   #      - $ref: '#/parameters/owner_name'
@@ -288,7 +288,7 @@ paths:
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/next_task:
     get:
       tags: [Tasks]
-      operationId: app.next_task
+      operationId: jt_jess.next_task
       summary: Executor asks for the next task to run
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -308,7 +308,7 @@ paths:
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/has_next_task:
     get:
       tags: [Tasks]
-      operationId: app.has_next_task
+      operationId: jt_jess.has_next_task
       summary: Executor asks whether there is any task to be run
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -322,7 +322,7 @@ paths:
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/job/{job_id}/task/{task_name}/task_completed:
     put:
       tags: [Tasks]
-      operationId: app.complete_task
+      operationId: jt_jess.complete_task
       summary: Executor reports completion of a task
       parameters:
         - $ref: '#/parameters/owner_name'
@@ -341,7 +341,7 @@ paths:
   /tasks/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/job/{job_id}/task/{task_name}/task_failed:
     put:
       tags: [Tasks]
-      operationId: app.fail_task
+      operationId: jt_jess.fail_task
       summary: Executor reports failure of a task
       parameters:
         - $ref: '#/parameters/owner_name'
