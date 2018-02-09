@@ -32,7 +32,7 @@ def enqueue_job(owner_name, queue_id, jobjson):
 
 
 def get_executors(owner_name, queue_id=None, executor_id=None):
-    return executor.get_executors(owner_name, queue_id, executor_id)
+    return exe.get_executors(owner_name, queue_id, executor_id)
 
 
 def get_executor(owner_name, queue_id, executor_id):
