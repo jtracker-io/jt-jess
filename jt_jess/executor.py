@@ -2,13 +2,13 @@ import json
 import etcd3
 from .jt_services import get_owner_id_by_name
 
-from .config import JESS_ETCD_HOST
-from .config import JESS_ETCD_PORT
+from .config import ETCD_HOST
+from .config import ETCD_PORT
 from .config import JESS_ETCD_ROOT
 
 
 # TODO: we will need to have better configurable settings for these other parameters
-etcd_client = etcd3.client(host=JESS_ETCD_HOST, port=JESS_ETCD_PORT,
+etcd_client = etcd3.client(host=ETCD_HOST, port=ETCD_PORT,
            ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
            user=None, password=None)
 
