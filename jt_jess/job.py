@@ -149,7 +149,8 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
             task_lists = {}
             for current_task in nx.topological_sort(G):  # generate a linear task execution plan
                 # print(current_task)
-                if current_task in ('', 'download'):  # TODO: need to deal with gather step that depends on scatter step
+                # TODO: need to deal with gather step that depends on scatter step
+                if current_task == '':  # '' is the root node, ie, a virtual task
                     continue
                 task_state = tasks.get(current_task).get('state')
                 if task_state not in task_lists:
