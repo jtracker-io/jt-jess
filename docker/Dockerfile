@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 # Metadata
 LABEL base.image="ubuntu:16.04"
-LABEL software="JTracker Workflow Registration Service"
+LABEL software="JTracker Job Execution Scheduling Service"
 LABEL website="https://github.com/jthub/jt-jess"
 
 # File Author / Maintainer
