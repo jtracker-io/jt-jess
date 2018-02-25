@@ -1,7 +1,7 @@
 from . import job, queue, executor as exe, task
 from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable, QueueCreationFailure
 
-__version__ = '0.2.0a7'
+__version__ = '0.2.0a8'
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
@@ -43,17 +43,12 @@ def get_executor1(owner_name, executor_id):
     return get_executors(owner_name, executor_id=executor_id)
 
 
-def register_executor(owner_name, queue_id, executor=None):
-    if executor is None:
-        executor = dict()
-    if not executor.get('id'):
-        return 'Invalid executor object', 400
-
+def register_executor(owner_name, queue_id, node_id):
     try:
-        rv = exe.register_executor(owner_name, queue_id, executor)
+        rv = exe.register_executor(owner_name, queue_id, node_id)
         return rv, 200
-    except:
-        return 'Failed, please make sure same executor has not been register before', 400
+    except Exception as e:
+        return str(e), 400
 
 
 def has_next_task(owner_name, queue_id, executor_id):
