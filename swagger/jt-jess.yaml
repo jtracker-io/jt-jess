@@ -228,6 +228,7 @@ paths:
       responses:
         200:
           description: Return executors
+  /executors/owner/{owner_name}/queue/{queue_id}/node/{node_id}:
     post:
       tags: [Executors]
       operationId: jt_jess.register_executor
@@ -235,13 +236,12 @@ paths:
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
-        - name: executor
-          in: body
-          schema:
-            $ref: '#/definitions/Executor'
+        - $ref: '#/parameters/node_id'
       responses:
         200:
           description: Executor registered
+          schema:
+            $ref: '#/definitions/Executor'
   /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}:
     get:
       tags: [Executors]
@@ -401,6 +401,13 @@ parameters:
     type: string
     required: true
     pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  node_id:
+    name: node_id
+    description: Unique ID for a compute node
+    in: path
+    type: string
+    required: true
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
   job_name:
     name: job_name
     description: Job's name
@@ -511,7 +518,7 @@ definitions:
     properties:
       id:
         type: string
-        description: Workflow's unique identifier
+        description: Executor's unique identifier
         pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
         readOnly: true
