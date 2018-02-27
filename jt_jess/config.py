@@ -13,3 +13,5 @@ ETCD_HOST = os.environ.get('ETCD_HOST', 'localhost')
 ETCD_PORT = os.environ.get('ETCD_PORT', 2379)
 
 JESS_ETCD_ROOT = '/jt:jess'
+
+JOB_STATES = ('submitted', 'queued', 'running', 'completed', 'failed', 'retry', 'suspended', 'cancelled')

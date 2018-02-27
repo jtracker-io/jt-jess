@@ -26,7 +26,7 @@ def has_next_task(owner_name, queue_id, executor_id):
 
     # if one task is in queued state, return true
     for job_id in job_ids:
-        job = get_jobs(owner_name, queue_id, job_id)[0]
+        job = get_jobs(owner_name, queue_id, job_id, state='running')[0]
         if job.get('tasks_by_state').get('queued', []):
             return True
 

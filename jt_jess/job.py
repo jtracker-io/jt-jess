@@ -10,6 +10,7 @@ from .jt_services import get_job_execution_plan
 from .config import ETCD_HOST
 from .config import ETCD_PORT
 from .config import JESS_ETCD_ROOT
+from .config import JOB_STATES
 
 
 # TODO: we will need to have better configurable settings for these other parameters
@@ -103,69 +104,76 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
             if job_id is not None and job_id != job.get('id'):  # if job_id specified
                 continue
 
-            tasks_prefix = '/'.join([JESS_ETCD_ROOT,
-                                     'job_queue.id:%s' % queue_id,
-                                     'job.id:%s' % job['id'],
-                                     'task@tasks/name:'])
-
-            r1 = etcd_client.get_prefix(key_prefix=tasks_prefix)
-
-            tasks = dict()
-            G = nx.DiGraph()
-            root = {''}
-            for value, meta in r1:
-                k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
-                                                               'job_queue.id:%s' % queue_id,
-                                                               'job.id:%s/task@tasks/' % job['id']]), '', 1)
-                try:
-                    v = value.decode("utf-8")
-                except:
-                    v = None  # assume binary value, deal with it later
-
-                task = {}
-
-                for new_k_vs in k.split('/'):
-                    if new_k_vs == 'task@tasks':
-                        continue
-                    if ':' in new_k_vs:
-                        new_k, new_v = new_k_vs.split(':', 1)
-                        task[new_k] = new_v
-                    else:
-                        task[new_k_vs] = v
-
-                task_name = task.get('name')
-                dependent_tasks = json.loads(task.get('task_file')).get('depends_on')
-                if dependent_tasks:
-                    for dt in dependent_tasks:
-                        if not dt.startswith('completed@'):
-                            continue
-                        dt = dt.split('@')[1]
-                        G.add_edge(dt, task_name)
-                else:
-                    G.add_edge('', task_name)  # this step has no dependency, use '' as root node to be parent task
-
-                tasks[task_name] = task
-
-            task_lists = {}
-            for current_task in nx.topological_sort(G):  # generate a linear task execution plan
-                # print(current_task)
-                # TODO: need to deal with gather step that depends on scatter step
-                if current_task == '':  # '' is the root node, ie, a virtual task
-                    continue
-                task_state = tasks.get(current_task).get('state')
-                if task_state not in task_lists:
-                    task_lists[task_state] = []
-
-                task_lists[task_state].append(
-                    {current_task: tasks.get(current_task)}
-                )
-
-            job['tasks_by_name'] = tasks
-            job['tasks_by_state'] = task_lists
+            tasks = get_tasks_by_job_id(queue_id, job['id'])
+            job.update(tasks)
             jobs.append(job)
 
         if jobs:
             return jobs
+
+
+def get_tasks_by_job_id(queue_id, job_id):
+    tasks_prefix = '/'.join([JESS_ETCD_ROOT,
+                             'job_queue.id:%s' % queue_id,
+                             'job.id:%s' % job_id,
+                             'task@tasks/name:'])
+
+    r1 = etcd_client.get_prefix(key_prefix=tasks_prefix)
+
+    tasks = dict()
+    G = nx.DiGraph()
+    root = {''}
+    for value, meta in r1:
+        k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
+                                                       'job_queue.id:%s' % queue_id,
+                                                       'job.id:%s/task@tasks/' % job_id]), '', 1)
+        try:
+            v = value.decode("utf-8")
+        except:
+            v = None  # assume binary value, deal with it later
+
+        task = {}
+
+        for new_k_vs in k.split('/'):
+            if new_k_vs == 'task@tasks':
+                continue
+            if ':' in new_k_vs:
+                new_k, new_v = new_k_vs.split(':', 1)
+                task[new_k] = new_v
+            else:
+                task[new_k_vs] = v
+
+        task_name = task.get('name')
+        dependent_tasks = json.loads(task.get('task_file')).get('depends_on')
+        if dependent_tasks:
+            for dt in dependent_tasks:
+                if not dt.startswith('completed@'):
+                    continue
+                dt = dt.split('@')[1]
+                G.add_edge(dt, task_name)
+        else:
+            G.add_edge('', task_name)  # this step has no dependency, use '' as root node to be parent task
+
+        tasks[task_name] = task
+
+    task_lists = {}
+    for current_task in nx.topological_sort(G):  # generate a linear task execution plan
+        # print(current_task)
+        # TODO: need to deal with gather step that depends on scatter step
+        if current_task == '':  # '' is the root node, ie, a virtual task
+            continue
+        task_state = tasks.get(current_task).get('state')
+        if task_state not in task_lists:
+            task_lists[task_state] = []
+
+        task_lists[task_state].append(
+            {current_task: tasks.get(current_task)}
+        )
+
+    return {
+        'tasks_by_name': tasks,
+        'tasks_by_state': task_lists
+    }
 
 
 def enqueue_job(owner_name, queue_id, job_json):

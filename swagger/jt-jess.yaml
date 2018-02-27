@@ -140,7 +140,13 @@ paths:
         - name: state
           type: string
           in: query
-          enum: ['running', 'completed', 'failed', 'suspended', 'cancelled']  # 'queued' can not be assigned to an executor
+          enum:  # 'queued' can not be assigned to an executor
+            - 'running'
+            - 'completed'
+            - 'failed'
+            - 'suspended'
+            - 'cancelled'
+            - 'retry'
       responses:
         200:
           description: Return jobs
@@ -155,7 +161,7 @@ paths:
         - name: state
           type: string
           in: query
-          enum: ['queued', 'running', 'completed', 'failed', 'suspended', 'cancelled']
+          enum: ['submitted', 'queued', 'running', 'completed', 'failed', 'suspended', 'cancelled', 'retry']
       responses:
         200:
           description: Return jobs
@@ -175,7 +181,7 @@ paths:
         - name: state
           type: string
           in: query
-          enum: ['queued', 'running', 'completed', 'failed', 'suspended', 'cancelled']
+          enum: ['submitted', 'queued', 'running', 'completed', 'failed', 'suspended', 'cancelled', 'retry']
       responses:
         200:
           description: Return job
