@@ -96,11 +96,11 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                     dt_name = dt.split('@')[1]
 
                     # latter is for 'gather' task
-                    for d_task_name in job.get('tasks_by_name'):
+                    for d_task_name in job.get('tasks'):
                         if not (d_task_name == dt_name or dt_name.startswith('%s.' % d_task_name)):
                             continue
 
-                        if job.get('tasks_by_name').get(d_task_name).get('state') != 'completed':
+                        if job.get('tasks').get(d_task_name).get('state') != 'completed':
                             dependency_ready = False
                             break
 
@@ -186,7 +186,7 @@ def end_task(owner_name, queue_id, executor_id, job_id, task_name, result, succe
         'task_file'
     ])
 
-    task = job.get('tasks_by_name').get(task_name)
+    task = job.get('tasks').get(task_name)
 
     task_r = etcd_client.get(task_etcd_key)
     try:
@@ -246,7 +246,7 @@ def _populate_task_input_params(job, task_file):
             pkey = m.group(1)  # parent output key
             ptask = m.group(2)  # parent task name, TODO: for 'gather' task, this will refer to multiple tasks
 
-            ptask_file_str = job.get('tasks_by_name').get(ptask, {}).get('task_file', '{}')
+            ptask_file_str = job.get('tasks').get(ptask, {}).get('task_file', '{}')
             ptask_output = json.loads(ptask_file_str).get('output', [])
             if ptask_output:
                 # get the last output since a task may have run multiple times

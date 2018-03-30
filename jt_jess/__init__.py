@@ -1,14 +1,23 @@
 from . import job, queue, executor as exe, task
 from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable, QueueCreationFailure
 
-__version__ = '0.2.0a8'
+__version__ = '0.2.0a9'
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
+    jobs = []
     try:
-        return job.get_jobs(owner_name, queue_id, job_id, state) or ('No job found', 404)
+        jobs = job.get_jobs(owner_name, queue_id, job_id, state)
     except Exception as err:
         return "Error: %s" % err, 400
+
+    for j in jobs:
+        j.pop('tasks_by_state', None)
+
+    if jobs:
+        return jobs
+    else:
+        return 'No job found', 404
 
 
 def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
@@ -21,6 +30,14 @@ def get_job(owner_name, queue_id, job_id, state=None):
         return jobs[0]
     else:
         return 'No job found', 404
+
+
+def delete_job(owner_name, queue_id, job_id):
+    rv = job.delete_job(owner_name, queue_id, job_id)
+    if rv:
+        return 'Job deleted: %s' % rv, 200
+    else:
+        return 'No job deleted', 404
 
 
 def enqueue_job(owner_name, queue_id, jobjson):
