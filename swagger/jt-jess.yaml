@@ -185,6 +185,25 @@ paths:
       responses:
         200:
           description: Return job
+    delete:
+      tags: [Jobs]
+      operationId: jt_jess.delete_job
+      summary: Delete a queued job.
+      parameters:
+        - $ref: '#/parameters/owner_name'
+        - $ref: '#/parameters/queue_id'
+        - name: job_id
+          in: path
+          type: string
+          required: true
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      responses:
+        200:
+          description: Job deleted
+        403:
+          description: Deletion not allowed
+        404:
+          description: Job not found
   /jobs/owner/{owner_name}/queue/{queue_id}/job/{job_id}/action:
     put:
       tags: [Jobs]

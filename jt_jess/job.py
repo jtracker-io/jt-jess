@@ -56,12 +56,46 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
     return jobs
 
 
+def delete_job(owner_name, queue_id, job_id):
+    # first let's get the job
+    jobs = get_jobs(owner_name, queue_id, job_id, state='queued')
+
+    if not jobs:
+        return
+
+    job_to_be_deleted = jobs[0]
+
+    job_name = job_to_be_deleted.get('name')
+    task_names = [t for t in job_to_be_deleted.get('tasks')]
+    job_key = "/jt:jess/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file" % (queue_id, job_id, job_name)
+    task_keys = ["/jt:jess/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file" %
+                 (queue_id, job_id, tn) for tn in task_names]
+
+    etcd_key_deletion = [etcd_client.transactions.delete(job_key)]
+    etcd_key_exist = [etcd_client.transactions.version(job_key) > 0]
+    for tk in task_keys:
+        etcd_key_deletion.append(etcd_client.transactions.delete(tk))
+        etcd_key_exist.append(etcd_client.transactions.version(tk) > 0)
+
+    succeeded, responses = etcd_client.transaction(
+        compare=etcd_key_exist,
+        success=etcd_key_deletion,
+        failure=[]
+    )
+
+    if succeeded:
+        return job_id
+    else:
+        return
+
+
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
     # TODO: have to make it very efficient to find job by ID, can't query all jobs from ETCD then filter the hits
     #       maybe we can search one job state at a time to get the job with supplied id
     # Job ETCD key eg: /jt:jess/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
     # Using generator will definitely help avoid retrieving all jobs at once, instead we can batch by state first
     # then by job UUID first two characters, eg, 00, 01, 02 ...
+    # It would be nice if we allow users to specify multiple job states
     try:
         owner_id = get_owner_id_by_name(owner_name)
     except Exception as err:
@@ -110,6 +144,8 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
 
         if jobs:
             return jobs
+        else:
+            return []
 
 
 def get_tasks_by_job_id(queue_id, job_id):
@@ -171,7 +207,7 @@ def get_tasks_by_job_id(queue_id, job_id):
         )
 
     return {
-        'tasks_by_name': tasks,
+        'tasks': tasks,
         'tasks_by_state': task_lists
     }
 
@@ -253,7 +289,7 @@ def update_job_state(owner_name, queue_id, executor_id, job_id):
 
     # if all tasks are in completed state, the job is completed too
     # update job state of the job itself and the one under any executor that ran any task of the job
-    if len(job.get('tasks_by_state').get('completed', [])) == len(job.get('tasks_by_name')):
+    if len(job.get('tasks_by_state').get('completed', [])) == len(job.get('tasks')):
         job_etcd_key_new = job_etcd_key_old.replace('state:running', 'state:completed')
         job_etcd_value_new = job_etcd_value_old
         exec_job_etcd_key_new = exec_job_etcd_key_old.replace('job@running_jobs', 'job@completed_jobs')
