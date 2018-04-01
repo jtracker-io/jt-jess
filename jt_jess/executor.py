@@ -47,6 +47,42 @@ def register_executor(owner_name, queue_id, node_id):
         raise Exception('Registering executor failed')
 
 
-def get_executors(owner_name, queue_id=None, executor_id=None):
-    print("not implemented yet")
-    return "not implemented yet"
+def get_executors(owner_name, queue_id=None, node_id=None):
+    owner_id = get_owner_id_by_name(owner_name)
+    if owner_id:
+        r0 = etcd_client.get('/'.join([JESS_ETCD_ROOT,
+                                       'job_queue.id:%s' % queue_id, 'owner.id']))
+        if r0 and r0[0] and owner_id != r0[0].decode(
+                "utf-8"):  # specified job queue does not belong to the specified owner
+            return
+    else:
+        raise Exception('Specified owner name does not exist')
+
+    key_prefix = '/'.join([JESS_ETCD_ROOT,
+                    'job_queue.id:%s' % queue_id,
+                    'node.id:%s' % ('%s/executor@executors/id:' % node_id if node_id else '')
+                    ])
+
+    executors = []
+    rv = etcd_client.get_prefix(key_prefix=key_prefix)
+    for value, meta in rv:
+        k = meta.key.decode('utf-8').replace(JESS_ETCD_ROOT, '', 1)
+        try:
+            v = value.decode("utf-8")
+        except:
+            v = None  # assume binary value, deal with it later
+
+        executor = {}
+        for token in k.split('/'):
+            if ':' not in token:
+                continue
+            k1, v1 = token.split(':')
+            if k1 == 'id' and v1 == '':
+                v1 = v
+            elif k1.endswith('.id'):
+                k1 = k1.replace('.', '_')
+            executor[k1] = v1
+
+        executors.append(executor)
+
+    return executors

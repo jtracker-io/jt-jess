@@ -51,6 +51,11 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
         job_ids = [j.get('id') for j in get_jobs_by_executor(owner_name, queue_id, executor_id, job_state)]
         new_jobs = [j for j in jobs if j['id'] in job_ids]
         jobs = new_jobs
+    else:  # start new job, but let's check whether there are jobs to be resumed
+        resume_jobs = get_jobs_by_executor(owner_name, queue_id, executor_id, 'resume')
+        for rj in reversed(resume_jobs):
+            rjobs = get_jobs(owner_name, queue_id, job_id=rj.get('id'), state='resume')
+            jobs = (rjobs if rjobs else []) + jobs   # add resumable jobs at beginning
 
     if not jobs:
         return
@@ -70,7 +75,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                 JESS_ETCD_ROOT,
                 'job_queue.id:%s' % queue_id,
                 'job@jobs',
-                'state:%s' % job_state,
+                'state:%s' % job.get('state'),
                 'id:%s' % job.get('id'),
                 'name:%s' % job.get('name'),
                 'job_file'
@@ -116,7 +121,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
             job_r = etcd_client.get(job_etcd_key)
             job_file = job_r[0].decode("utf-8")
 
-            new_job_etcd_key = job_etcd_key.replace('/state:queued/', '/state:running/')  # if match
+            new_job_etcd_key = job_etcd_key.replace('/state:%s/' % job.get('state'), '/state:running/')  # if match
             new_task_etcd_key = task_etcd_key.replace('/state:queued/', '/state:running/')
 
             # add running job to executor
@@ -128,6 +133,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                 'id:%s' % job.get('id')
             ])
             exec_job_etcd_value = ''
+            exec_job_etcd_key_resume = exec_job_etcd_key.replace('/job@running_jobs/', '/job@resume_jobs/')
 
             if job_state == 'running':  # no need to change job file
                 etcd_client.transaction(
@@ -138,10 +144,13 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                     success=[
                         etcd_client.transactions.put(exec_job_etcd_key, exec_job_etcd_value),
                         etcd_client.transactions.put(new_task_etcd_key, task_file),
+                        etcd_client.transactions.delete(exec_job_etcd_key_resume),  # delete the resume key if exists
                         etcd_client.transactions.delete(task_etcd_key),
                     ],
                     failure=[]
                 )
+            #elif job.get('state') in ('resume'):  # resuming a job
+            #    pass
             else:  # need to change job file key by adding new and removing old
                 etcd_client.transaction(
                     compare=[
