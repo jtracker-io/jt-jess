@@ -1,7 +1,7 @@
 from . import job, queue, executor as exe, task
 from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable, QueueCreationFailure
 
-__version__ = '0.2.0a9'
+__version__ = '0.2.0a10'
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
@@ -37,7 +37,7 @@ def delete_job(owner_name, queue_id, job_id):
     if rv:
         return 'Job deleted: %s' % rv, 200
     else:
-        return 'No job deleted', 404
+        return 'Job: %s not exist or deletion not allowed' % job_id, 400
 
 
 def enqueue_job(owner_name, queue_id, jobjson):
@@ -169,17 +169,27 @@ def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
     if action is None:
         action = dict()
 
-    if action.get('action') in ('cancel', 'suspend'):
+    action_type = action.get('action')
+    node_id = action.get('node_id')
+    executor_id = action.get('executor_id')
+    user_id = action.get('user_id')
+
+    if action_type in ('cancel', 'suspend'):
         # only 'suspended', 'queued' and 'running' jobs can be cancelled
         # no effect on a job that is 'cancelled' or 'failed'
-        executor_id = action.get('executor_id')
-        user_id = action.get('user_id')
-        action_type = action.get('action')
         return job.stop_job(owner_name=owner_name, action_type=action_type, queue_id=queue_id,
                          job_id=job_id, executor_id=executor_id, user_id=user_id)
 
+    elif action_type == 'resume':
+        rv = job.resume_job(owner_name=owner_name, queue_id=queue_id,
+                            job_id=job_id, user_id=user_id, node_id=node_id)
+        if rv:
+            return rv, 200
+        else:
+            return 'Job: %s not exist or not resumable' % job_id, 400
+
     else:
-        return 'Not implemented yet', 200
+        return 'Not implemented yet', 501
 
 
 def queue_action(owner_name):

@@ -106,7 +106,7 @@ paths:
         - name: state
           type: string
           in: query
-          enum: ['queued', 'running', 'completed', 'failed', 'suspended', 'cancelled']
+          enum: ['running', 'queued', 'completed', 'failed', 'suspended', 'cancelled', 'submitted', 'retry', 'resume']
       responses:
         200:
           description: Return jobs
@@ -181,7 +181,7 @@ paths:
         - name: state
           type: string
           in: query
-          enum: ['submitted', 'queued', 'running', 'completed', 'failed', 'suspended', 'cancelled', 'retry']
+          enum: ['running', 'queued', 'completed', 'failed', 'suspended', 'cancelled', 'submitted', 'retry', 'resume']
       responses:
         200:
           description: Return job
@@ -208,7 +208,7 @@ paths:
     put:
       tags: [Jobs]
       operationId: jt_jess.job_action
-      summary: Perform an action on a job, eg, pause, resume, cancel ... (not implemented yet)
+      summary: Perform an action on a job, eg, suspend, resume, cancel ... (partially implemented)
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -592,6 +592,10 @@ definitions:
         type: string
         description: Action on job
         enum: ["cancel", "resume", "suspend"]
+      node_id:
+        type: string
+        description: Node ID of node in which the executor resides
+        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
       executor_id:
         type: string
         description: Executor ID if it's requested by an executor

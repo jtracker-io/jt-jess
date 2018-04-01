@@ -4,6 +4,7 @@ import etcd3
 import networkx as nx
 
 from .queue import get_queues
+from .executor import get_executors
 from .jt_services import get_owner_id_by_name
 from .jt_services import get_job_execution_plan
 
@@ -47,7 +48,7 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
                                 'executor.id:%s' % executor_id,
                                 'job@%s' % ('' if state is None else '%s_jobs/id:' % state)])
 
-        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='create')
 
         for value, meta in r:
             job_state, job_id = meta.key.decode('utf-8').split('/')[-2:]  # the last one is job ID
@@ -114,7 +115,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
                                 'job_queue.id:%s' % queue_id,
                                 'job@jobs/state:%s' % ('' if state is None else state + '/')])
-        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='CREATE', sort_order='descend')
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='create')
 
         for value, meta in r:
             k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
@@ -399,18 +400,133 @@ def stop_job(owner_name=None, action_type=None, queue_id=None,
     job_etcd_value_new = job_etcd_value_old
     exec_job_etcd_key_new = exec_job_etcd_key_old.replace('job@running_jobs', 'job@%s_jobs' % new_state)
 
+    running_task = [t for t in job.get('tasks') if job.get('tasks').get(t).get('state') == 'running']
+    old_task_keys = ["/jt:jess/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:running/task_file" %
+                 (queue_id, job_id, rt) for rt in running_task]
+
+    task_key_exist_compare = []
+    task_key_update = []
+    for otk in old_task_keys:
+        new_task_key = otk.replace('state:running', 'state:%s' % new_state)
+        task_key_exist_compare.append(etcd_client.transactions.version(otk) > 0)
+        task_key_update.append(etcd_client.transactions.delete(otk))  # delete old key
+
+        task_r = etcd_client.get(otk)
+        task_value = task_r[0].decode("utf-8")
+        task_key_update.append(etcd_client.transactions.put(new_task_key, task_value))  # delete old key
+
     etcd_client.transaction(
         compare=[
             etcd_client.transactions.version(job_etcd_key_old) > 0,
             etcd_client.transactions.version(exec_job_etcd_key_old) > 0,
-        ],
+        ] + task_key_exist_compare,
         success=[
             etcd_client.transactions.delete(job_etcd_key_old),
             etcd_client.transactions.put(job_etcd_key_new, job_etcd_value_new),
             etcd_client.transactions.delete(exec_job_etcd_key_old),
             etcd_client.transactions.put(exec_job_etcd_key_new, ''),
-        ],
+        ] + task_key_update,
         failure=[]
     )
 
     return 'Job %s' % new_state
+
+
+def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, node_id=None):
+    resumable_states = ('cancelled', 'suspended', 'failed')
+
+    # find the job first in one of the resumable states
+    job = None
+    for st in resumable_states:
+        jobs = get_jobs(owner_name, queue_id, job_id, st)
+        if jobs:
+            job = jobs[0]
+            break
+
+    if not job:
+        return
+
+    # now find the executor(s) that worked on this job
+    # there could be multiple executors per job, but for now we assume just one
+    executors = get_executors(owner_name, queue_id, node_id)
+    if not executors:
+        return
+
+    executor = None
+    for exe in executors:
+        exec_job_key = '/'.join([JESS_ETCD_ROOT,
+                                 'executor.id:%s' % exe.get('id'),
+                                 'job@%s_jobs' % job.get('state'),
+                                 'id:%s' % job.get('id')
+                                 ])
+
+        v, kmeta = etcd_client.get(exec_job_key)
+        if v is not None:
+            executor = exe
+            break
+
+    if not executor:
+        return
+
+    etcd_key_exist = []
+    etcd_key_delete = []
+    etcd_key_add = []
+
+    # get exec key
+    exec_job_key = '/'.join([JESS_ETCD_ROOT,
+                         'executor.id:%s' % executor.get('id'),
+                         'job@%s_jobs' % job.get('state'),
+                         'id:%s' % job.get('id')
+                         ])
+    etcd_key_exist.append(etcd_client.transactions.version(exec_job_key) > 0)
+    etcd_key_delete.append(etcd_client.transactions.delete(exec_job_key))
+
+    exec_job_key_new = exec_job_key.replace('/job@%s_jobs/' % job.get('state'), '/job@%s_jobs/' % 'resume')
+    etcd_key_add.append(etcd_client.transactions.put(exec_job_key_new, ''))  # empty value
+
+    job_key = '/'.join([JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job@jobs',
+                        'state:%s' % job.get('state'),
+                        'id:%s' % job.get('id'),
+                        'name:%s' % job.get('name'),
+                        'job_file'
+                        ])
+    etcd_key_exist.append(etcd_client.transactions.version(job_key) > 0)
+    etcd_key_delete.append(etcd_client.transactions.delete(job_key))
+
+    job_r = etcd_client.get(job_key)
+    job_etcd_value = job_r[0].decode("utf-8")
+    job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % 'resume')
+    etcd_key_add.append(etcd_client.transactions.put(job_key_new, job_etcd_value))
+
+    # now get all tasks, change tasks to 'queued' that are non-completed, non-queued tasks
+    for t in job.get('tasks'):
+        if job.get('tasks').get(t).get('state') not in ('completed', 'queued'):
+            task_key = '/'.join([JESS_ETCD_ROOT,
+                                 'job_queue.id:%s' % queue_id,
+                                 'job.id:%s' % job.get('id'),
+                                 'task@tasks/name:%s' % job.get('tasks').get(t).get('name'),
+                                 'state:%s' % job.get('tasks').get(t).get('state'),
+                                 'task_file'
+                                 ])
+
+            task_r = etcd_client.get(task_key)
+            task_etcd_value = task_r[0].decode("utf-8")
+
+            task_key_new = task_key.replace('state:%s' % job.get('tasks').get(t).get('state'), 'state:queued')
+
+            etcd_key_exist.append(etcd_client.transactions.version(task_key) > 0)
+            etcd_key_delete.append(etcd_client.transactions.delete(task_key))
+            etcd_key_add.append(etcd_client.transactions.put(task_key_new, task_etcd_value))
+
+    succeeded, responses = etcd_client.transaction(
+        compare=etcd_key_exist,
+        success=etcd_key_delete + etcd_key_add,
+        failure=[]
+    )
+
+    if succeeded:
+        return "Job: %s set to resume" % job_id
+    else:
+        return
