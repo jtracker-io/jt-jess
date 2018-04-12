@@ -43,8 +43,6 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
     # multiple executors, this advanced feature may need to be supported later
 
     jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
-    if not jobs:
-        return
 
     # jobs run by the current executor
     if job_state == 'running':
