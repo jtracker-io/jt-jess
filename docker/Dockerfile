@@ -17,7 +17,6 @@ RUN curl -sSL -o tmp.tar.gz --retry 10 https://github.com/jtracker-io/jt-jess/ar
     mkdir -p /srv/jt-jess && \
     tar -C /srv/jt-jess --strip-components 1 -zxf tmp.tar.gz && \
     apt-get -yqq install python3-pip && \
-    pip3 install --upgrade pip  && \
     pip3 install -r /srv/jt-jess/requirements.txt
 
 CMD ["python3", "/srv/jt-jess/app.py"]
