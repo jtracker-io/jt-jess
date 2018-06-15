@@ -48,7 +48,7 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
                                 'executor.id:%s' % executor_id,
                                 'job@%s' % ('' if state is None else '%s_jobs/id:' % state)])
 
-        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='create')
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='mod')
 
         for value, meta in r:
             job_state, job_id = meta.key.decode('utf-8').split('/')[-2:]  # the last one is job ID
@@ -115,7 +115,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
                                 'job_queue.id:%s' % queue_id,
                                 'job@jobs/state:%s' % ('' if state is None else state + '/')])
-        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='create')
+        r = etcd_client.get_prefix(key_prefix=jobs_prefix, sort_target='mod')
 
         for value, meta in r:
             k = meta.key.decode('utf-8').replace('/'.join([JESS_ETCD_ROOT,
