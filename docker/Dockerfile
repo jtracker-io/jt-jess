@@ -1,7 +1,7 @@
-FROM ubuntu:16.04
+FROM python:3.7
 
 # Metadata
-LABEL base.image="ubuntu:16.04"
+LABEL base.image="python:3.7"
 LABEL software="JTracker Job Execution Scheduling Service"
 LABEL website="https://github.com/jtracker-io/jt-jess"
 
@@ -10,13 +10,9 @@ MAINTAINER Junjun Zhang <junjun.ca@gmail.com>
 
 USER root
 
-RUN apt-get -yqq update && \
-    apt-get -yqq install curl
-
-RUN curl -sSL -o tmp.tar.gz --retry 10 https://github.com/jtracker-io/jt-jess/archive/0.2.0a12.tar.gz && \
+RUN wget -O tmp.tar.gz -t 10 https://github.com/jtracker-io/jt-jess/archive/0.2.0a13.tar.gz && \
     mkdir -p /srv/jt-jess && \
     tar -C /srv/jt-jess --strip-components 1 -zxf tmp.tar.gz && \
-    apt-get -yqq install python3-pip && \
     pip3 install -r /srv/jt-jess/requirements.txt
 
 CMD ["python3", "/srv/jt-jess/app.py"]

@@ -21,8 +21,6 @@ paths:
       responses:
         200:
           description: Return Queues for the specified owner
-          schema:
-            type: array
   /queues/owner/{owner_name}/queue/{queue_id}:
     get:
       tags: [Queues]
@@ -47,8 +45,6 @@ paths:
       responses:
         200:
           description: Return job queues for a given owner and workflow_name
-          schema:
-            type: array
   /queues/owner/{owner_name}/workflow/{workflow_name}/ver/{workflow_version}:
     get:
       tags: [Queues]
@@ -61,8 +57,6 @@ paths:
       responses:
         200:
           description: Return job queues for the specified owner
-          schema:
-            type: array
     post:
       tags: [Queues]
       operationId: jt_jess.register_queue
