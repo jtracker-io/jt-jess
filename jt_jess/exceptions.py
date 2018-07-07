@@ -35,4 +35,4 @@ class WRSNotAvailable(Exception):
 
 class QueueCreationFailure(Exception):
     def __str__(self):
-        return 'Queue creation failed, job queue for the same workflow may have already been created'
+        return 'Queue creation failed'

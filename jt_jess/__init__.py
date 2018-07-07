@@ -17,7 +17,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
     if jobs:
         return jobs
     else:
-        return 'No job found', 404
+        return 'No job found, make sure specified queue exist', 404
 
 
 def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):

@@ -39,7 +39,7 @@ def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_nam
                               'owner.id:%s' % owner_id,
                               'workflow.id:%s' % workflow.get('id'),
                               'workflow.ver:%s' % workflow_version,
-                              'job_queue@job_queues/id'  # one job queue for each workflow for now, more queues maybe allowed later
+                              'job_queue@job_queues/id:%s' % queue_id
                               ])
 
     # /jt:jess/job_queue.id:fef43d38-5097-4028-9671-71ad7c7e42d9/owner.id
@@ -56,7 +56,7 @@ def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_nam
         success=[
         ],
         failure=[
-            etcd_client.transactions.put(queue_etcd_key, queue_id),
+            etcd_client.transactions.put(queue_etcd_key, ''),
             etcd_client.transactions.put(queue_owner_etcd_key, owner_id)
         ]
     )
@@ -91,16 +91,12 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
 
         # print("k:%s, v:%s" % (k, v))
 
-        if not k.endswith('/id'):
-            continue
-
-        if queue_id and v != queue_id:  # get only specified job queue
-            continue
-
         queue = {
-            'id': v,
             'owner.name': owner_name
         }
+
+        if k.endswith('/id'):
+            queue['id'] = v
 
         for new_k_vs in k.split('/'):
             if new_k_vs == 'job_queue@job_queues':
@@ -108,6 +104,9 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
             if ':' in new_k_vs:
                 new_k, new_v = new_k_vs.split(':', 1)
                 queue[new_k] = new_v
+
+        if queue_id and queue['id'] != queue_id:  # get only specified job queue
+            continue
 
         try:
             workflow = get_workflow_by_id(queue.get('workflow.id'), workflow_version)

@@ -110,7 +110,7 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None):
 
         if r0 and r0[0] and owner_id != r0[0].decode(
                 "utf-8"):  # specified job queue does not belong to the specified owner
-            return
+            return []
 
         jobs_prefix = '/'.join([JESS_ETCD_ROOT,
                                 'job_queue.id:%s' % queue_id,
