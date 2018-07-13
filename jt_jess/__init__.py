@@ -188,6 +188,14 @@ def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
         else:
             return 'Job: %s not exist or not resumable' % job_id, 400
 
+    elif action_type == 'reset':
+        rv = job.reset_job(owner_name=owner_name, queue_id=queue_id,
+                            job_id=job_id, new_state='queued', user_id=user_id, node_id=node_id)
+        if rv:
+            return rv, 200
+        else:
+            return 'Job: %s not exist or can not be reset' % job_id, 400
+
     else:
         return 'Not implemented yet', 501
 

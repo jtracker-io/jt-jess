@@ -585,7 +585,7 @@ definitions:
       action:
         type: string
         description: Action on job
-        enum: ["cancel", "resume", "suspend"]
+        enum: ["cancel", "resume", "suspend", "reset"]
       node_id:
         type: string
         description: Node ID of node in which the executor resides
