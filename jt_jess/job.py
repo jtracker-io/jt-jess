@@ -433,7 +433,15 @@ def stop_job(owner_name=None, action_type=None, queue_id=None,
 
 
 def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, node_id=None):
+    reset_job(owner_name, queue_id, job_id, new_state='resume', \
+              executor_id=executor_id, user_id=user_id, node_id=node_id)
+
+
+def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None, user_id=None, node_id=None):
     resumable_states = ('cancelled', 'suspended', 'failed')
+
+    if not new_state in ('queued', 'resume'):
+        return
 
     # find the job first in one of the resumable states
     job = None
@@ -481,7 +489,7 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
     etcd_key_exist.append(etcd_client.transactions.version(exec_job_key) > 0)
     etcd_key_delete.append(etcd_client.transactions.delete(exec_job_key))
 
-    exec_job_key_new = exec_job_key.replace('/job@%s_jobs/' % job.get('state'), '/job@%s_jobs/' % 'resume')
+    exec_job_key_new = exec_job_key.replace('/job@%s_jobs/' % job.get('state'), '/job@%s_jobs/' % new_state)
     etcd_key_add.append(etcd_client.transactions.put(exec_job_key_new, ''))  # empty value
 
     job_key = '/'.join([JESS_ETCD_ROOT,
@@ -497,12 +505,13 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
 
     job_r = etcd_client.get(job_key)
     job_etcd_value = job_r[0].decode("utf-8")
-    job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % 'resume')
+    job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % new_state)
     etcd_key_add.append(etcd_client.transactions.put(job_key_new, job_etcd_value))
 
     # now get all tasks, change tasks to 'queued' that are non-completed, non-queued tasks
     for t in job.get('tasks'):
-        if job.get('tasks').get(t).get('state') not in ('completed', 'queued'):
+        if new_state == 'queued' and job.get('tasks').get(t).get('state') != 'queued' or \
+           new_state == 'resume' and job.get('tasks').get(t).get('state') not in ('completed', 'queued'):
             task_key = '/'.join([JESS_ETCD_ROOT,
                                  'job_queue.id:%s' % queue_id,
                                  'job.id:%s' % job.get('id'),
@@ -527,6 +536,6 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
     )
 
     if succeeded:
-        return "Job: %s set to resume" % job_id
+        return "Job: %s set to '%s'" % (job_id, new_state)
     else:
         return
