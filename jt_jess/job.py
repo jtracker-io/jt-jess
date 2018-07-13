@@ -438,14 +438,14 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
 
 
 def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None, user_id=None, node_id=None):
-    resumable_states = ('cancelled', 'suspended', 'failed')
+    resetable_states = ('cancelled', 'suspended', 'failed')
 
     if not new_state in ('queued', 'resume'):
         return
 
-    # find the job first in one of the resumable states
+    # find the job first in one of the resetable states
     job = None
-    for st in resumable_states:
+    for st in resetable_states:
         jobs = get_jobs(owner_name, queue_id, job_id, st)
         if jobs:
             job = jobs[0]
@@ -489,8 +489,9 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
     etcd_key_exist.append(etcd_client.transactions.version(exec_job_key) > 0)
     etcd_key_delete.append(etcd_client.transactions.delete(exec_job_key))
 
-    exec_job_key_new = exec_job_key.replace('/job@%s_jobs/' % job.get('state'), '/job@%s_jobs/' % new_state)
-    etcd_key_add.append(etcd_client.transactions.put(exec_job_key_new, ''))  # empty value
+    if new_state == 'resume':  # only for when it's for resume
+        exec_job_key_new = exec_job_key.replace('/job@%s_jobs/' % job.get('state'), '/job@%s_jobs/' % new_state)
+        etcd_key_add.append(etcd_client.transactions.put(exec_job_key_new, ''))  # empty value
 
     job_key = '/'.join([JESS_ETCD_ROOT,
                         'job_queue.id:%s' % queue_id,
