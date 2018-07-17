@@ -509,6 +509,7 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
     job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % new_state)
     etcd_key_add.append(etcd_client.transactions.put(job_key_new, job_etcd_value))
 
+    # we need to reset the 'input' section for each of the tasks that are to be set back to 'queued'
     queues = get_queues(owner_name, queue_id=queue_id)
 
     if queues:  # should only have one queue with the specified ID
@@ -518,7 +519,6 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
     else:
         return   # need better exception handle
 
-    # we need to reset the 'input' section for each of the tasks that are to be set back to 'queued'
     job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, json.loads(job_etcd_value))
 
     task_original_input = {}
