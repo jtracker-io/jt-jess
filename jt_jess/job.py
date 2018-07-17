@@ -433,7 +433,7 @@ def stop_job(owner_name=None, action_type=None, queue_id=None,
 
 
 def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, node_id=None):
-    reset_job(owner_name, queue_id, job_id, new_state='resume', \
+    return reset_job(owner_name, queue_id, job_id, new_state='resume', \
               executor_id=executor_id, user_id=user_id, node_id=node_id)
 
 
@@ -509,7 +509,25 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
     job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % new_state)
     etcd_key_add.append(etcd_client.transactions.put(job_key_new, job_etcd_value))
 
-    # now get all tasks, change tasks to 'queued' that are non-completed, non-queued tasks
+    queues = get_queues(owner_name, queue_id=queue_id)
+
+    if queues:  # should only have one queue with the specified ID
+        workflow_owner = queues[0].get('workflow_owner.name')
+        workflow_name = queues[0].get('workflow.name')
+        workflow_version = queues[0].get('workflow.ver')
+    else:
+        return   # need better exception handle
+
+    # we need to reset the 'input' section for each of the tasks that are to be set back to 'queued'
+    job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, json.loads(job_etcd_value))
+
+    task_original_input = {}
+    for t in job_with_execution_plan.get('tasks'):
+        task_name = t.get('task')
+        task_input = t.get('input')
+        task_original_input[task_name] = task_input
+
+    # now get all tasks, change tasks to 'queued' that are non-completed, non-queued tasks for 'resume', everything to queued for reset
     for t in job.get('tasks'):
         if new_state == 'queued' and job.get('tasks').get(t).get('state') != 'queued' or \
            new_state == 'resume' and job.get('tasks').get(t).get('state') not in ('completed', 'queued'):
@@ -523,6 +541,11 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
 
             task_r = etcd_client.get(task_key)
             task_etcd_value = task_r[0].decode("utf-8")
+
+            # reset the task input to original
+            task_dict = json.loads(task_etcd_value)
+            task_dict['input'] = task_original_input.get(task_dict.get('task'))
+            task_etcd_value = json.dumps(task_dict)
 
             task_key_new = task_key.replace('state:%s' % job.get('tasks').get(t).get('state'), 'state:queued')
 
