@@ -552,7 +552,8 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
             task_key_new = task_key.replace('state:%s' % job.get('tasks').get(t).get('state'), 'state:queued')
 
             etcd_key_exist.append(etcd_client.transactions.version(task_key) > 0)
-            etcd_key_delete.append(etcd_client.transactions.delete(task_key))
+            if job.get('tasks').get(t).get('state') != 'queued':  # if the old state is 'queued', no key to delete
+                etcd_key_delete.append(etcd_client.transactions.delete(task_key))
             etcd_key_add.append(etcd_client.transactions.put(task_key_new, task_etcd_value))
 
     succeeded, responses = etcd_client.transaction(
