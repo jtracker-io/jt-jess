@@ -438,7 +438,7 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
 
 
 def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None, user_id=None, node_id=None):
-    resetable_states = ('cancelled', 'suspended', 'failed')
+    resetable_states = ('cancelled', 'suspended', 'failed', 'running')  # careful about reset 'running' job
 
     if not new_state in ('queued', 'resume'):
         return
