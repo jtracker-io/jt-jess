@@ -527,10 +527,12 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
         task_input = t.get('input')
         task_original_input[task_name] = task_input
 
-    # now get all tasks, change tasks to 'queued' that are non-completed, non-queued tasks for 'resume', everything to queued for reset
+    # now get all tasks
     for t in job.get('tasks'):
-        if new_state == 'queued' and job.get('tasks').get(t).get('state') != 'queued' or \
-           new_state == 'resume' and job.get('tasks').get(t).get('state') not in ('completed', 'queued'):
+        # change tasks to 'queued' that are non-completed tasks for 'resume'
+        # everything to 'queued' for 'reset'
+        if new_state == 'queued' or \
+           new_state == 'resume' and job.get('tasks').get(t).get('state') != 'completed':
             task_key = '/'.join([JESS_ETCD_ROOT,
                                  'job_queue.id:%s' % queue_id,
                                  'job.id:%s' % job.get('id'),
