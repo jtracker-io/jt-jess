@@ -1,5 +1,6 @@
 connexion>=1.3
 gevent>=1.1b1
+greenlet==0.4.13
 etcd3>=0.8.0
 networkx>=1.11
 flask_cors>3
