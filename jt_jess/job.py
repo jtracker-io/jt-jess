@@ -16,8 +16,12 @@ from .config import JOB_STATES
 
 # TODO: we will need to have better configurable settings for these other parameters
 etcd_client = etcd3.client(host=ETCD_HOST, port=ETCD_PORT,
-           ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
-           user=None, password=None)
+            ca_cert=None, cert_key=None, cert_cert=None, timeout=None,
+            user=None, password=None, grpc_options={
+                                                        'grpc.max_send_message_length': 10 * 1024 * 1024,
+                                                        'grpc.max_receive_message_length': -1,
+                                                    }.items()
+            )
 
 
 def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
