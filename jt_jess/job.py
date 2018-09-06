@@ -64,6 +64,7 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
 def delete_job(owner_name, queue_id, job_id):
     # first let's get the job
     jobs = get_jobs(owner_name, queue_id, job_id, state='queued')
+    jobs = jobs + get_jobs(owner_name, queue_id, job_id, state='suspended')
 
     if not jobs:
         return
@@ -72,7 +73,8 @@ def delete_job(owner_name, queue_id, job_id):
 
     job_name = job_to_be_deleted.get('name')
     task_names = [t for t in job_to_be_deleted.get('tasks')]
-    job_key = "/jt:jess/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file" % (queue_id, job_id, job_name)
+    job_key = "/jt:jess/job_queue.id:%s/job@jobs/state:%s/id:%s/name:%s/job_file" % \
+              (queue_id, job_to_be_deleted.get('state'), job_id, job_name)
     task_keys = ["/jt:jess/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file" %
                  (queue_id, job_id, tn) for tn in task_names]
 
@@ -234,6 +236,7 @@ def enqueue_job(owner_name, queue_id, job_json):
         if job_with_execution_plan:
             job_json['id'] = str(uuid.uuid4())
             job_name = job_json['name'] if job_json.get('name') else '_unnamed'
+            # TODO: make this multiple key put operation transactional
             etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
                             (JESS_ETCD_ROOT, queue_id, job_json['id'], job_name), value=json.dumps(job_json))
             for task in job_with_execution_plan.pop('tasks'):
@@ -442,7 +445,7 @@ def resume_job(owner_name, queue_id, job_id, executor_id=None, user_id=None, nod
 
 
 def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None, user_id=None, node_id=None):
-    resetable_states = ('cancelled', 'suspended', 'failed', 'running')  # careful about reset 'running' job
+    resetable_states = ('cancelled', 'suspended', 'failed', 'running', 'resume')  # careful about reset 'running' job
 
     if not new_state in ('queued', 'resume'):
         return
@@ -457,6 +460,16 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
 
     if not job:
         return
+
+    if job.get('state') == 'suspended' and new_state == 'resume':  # suspended job can not resume, can be reset
+        return
+
+    if job.get('state') == 'suspended':
+        return change_job_state(owner_name=owner_name,
+                            queue_id=queue_id,
+                            job_id=job_id,
+                            old_state='suspended',
+                            new_state='queued')
 
     # now find the executor(s) that worked on this job
     # there could be multiple executors per job, but for now we assume just one
@@ -568,5 +581,50 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
 
     if succeeded:
         return "Job: %s set to '%s'" % (job_id, new_state)
+    else:
+        return
+
+
+def suspend_job(owner_name, queue_id, job_id):
+    return change_job_state(owner_name=owner_name,
+                            queue_id=queue_id,
+                            job_id=job_id,
+                            old_state='queued',
+                            new_state='suspended')
+
+
+def change_job_state(owner_name, queue_id, job_id, old_state, new_state):
+    if not ((old_state == 'queued' and new_state == 'suspended') or \
+            (old_state == 'suspended' and new_state == 'queued')):
+        return
+
+    jobs = get_jobs(owner_name, queue_id, job_id, old_state)
+
+    if not jobs:
+        return
+    else:
+        job = jobs[0]
+
+    job_key = '/'.join([JESS_ETCD_ROOT,
+                        'job_queue.id:%s' % queue_id,
+                        'job@jobs',
+                        'state:%s' % job.get('state'),
+                        'id:%s' % job.get('id'),
+                        'name:%s' % job.get('name'),
+                        'job_file'
+                        ])
+
+    job_r = etcd_client.get(job_key)
+    job_etcd_value = job_r[0].decode("utf-8")
+    job_key_new = job_key.replace('/job@jobs/state:%s/' % job.get('state'), '/job@jobs/state:%s/' % new_state)
+
+    succeeded, responses = etcd_client.transaction(
+        compare=[etcd_client.transactions.version(job_key) > 0],
+        success=[etcd_client.transactions.delete(job_key), etcd_client.transactions.put(job_key_new, job_etcd_value)],
+        failure=[]
+    )
+
+    if succeeded:
+        return "Job: %s set from '%s' to '%s'" % (job_id, old_state, new_state)
     else:
         return
