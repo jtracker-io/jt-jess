@@ -174,11 +174,20 @@ def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
     executor_id = action.get('executor_id')
     user_id = action.get('user_id')
 
-    if action_type in ('cancel', 'suspend'):
+    if action_type == 'cancel':
         # only 'suspended', 'queued' and 'running' jobs can be cancelled
         # no effect on a job that is 'cancelled' or 'failed'
         return job.stop_job(owner_name=owner_name, action_type=action_type, queue_id=queue_id,
                          job_id=job_id, executor_id=executor_id, user_id=user_id)
+
+    elif action_type == 'suspend':
+        # only 'queued' jobs can be suspended
+        rv = job.suspend_job(owner_name=owner_name, queue_id=queue_id,
+                            job_id=job_id)
+        if rv:
+            return rv, 200
+        else:
+            return 'Job: %s not exist or can not be suspended' % job_id, 400
 
     elif action_type == 'resume':
         rv = job.resume_job(owner_name=owner_name, queue_id=queue_id,
