@@ -62,9 +62,11 @@ def get_jobs_by_executor(owner_name, queue_id, executor_id, state=None):
 
 
 def delete_job(owner_name, queue_id, job_id):
-    # first let's get the job
-    jobs = get_jobs(owner_name, queue_id, job_id, state='queued')
-    jobs = jobs + get_jobs(owner_name, queue_id, job_id, state='suspended')
+    # first let's get the job which has to be in a deletable state
+    # we need to revisit this later, as a guiding principle we don't want delete (ie, erase history)
+    jobs = []
+    for s in ("queued", "suspended"):
+        jobs = jobs + get_jobs(owner_name, queue_id, job_id, state=s)
 
     if not jobs:
         return

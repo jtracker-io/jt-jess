@@ -19,7 +19,7 @@ etcd_client = etcd3.client(host=ETCD_HOST, port=ETCD_PORT,
            user=None, password=None)
 
 
-def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_name):
+def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_name, state='open'):
     owner_id = get_owner_id_by_name(owner_name)
 
     if not owner_id:
@@ -56,7 +56,7 @@ def create_queue(owner_name, workflow_name, workflow_version, workflow_owner_nam
         success=[
         ],
         failure=[
-            etcd_client.transactions.put(queue_etcd_key, ''),
+            etcd_client.transactions.put(queue_etcd_key, state),
             etcd_client.transactions.put(queue_owner_etcd_key, owner_id)
         ]
     )
@@ -96,7 +96,9 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
         }
 
         if k.endswith('/id'):
-            queue['id'] = v
+            queue['id'] = v  # for backward compatibility
+        else:
+            queue['state'] = v if v else 'open'  # no value means open
 
         for new_k_vs in k.split('/'):
             if new_k_vs == 'job_queue@job_queues':
@@ -105,7 +107,8 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
                 new_k, new_v = new_k_vs.split(':', 1)
                 queue[new_k] = new_v
 
-        if queue_id and queue['id'] != queue_id:  # get only specified job queue
+        # get only specified queue, inefficient as etcd can't search. Shouldn't be too bad due to low number of queues
+        if queue_id and queue['id'] != queue_id:
             continue
 
         try:
@@ -126,3 +129,46 @@ def get_queues(owner_name, workflow_name=None, workflow_version=None, workflow_o
         queues.append(queue)
 
     return queues
+
+
+def queue_action(owner_name, queue_id, action=None):
+    if not (action or queue_id): return
+
+    if not action.get('action') in ('open', 'close', 'pause'):
+        return
+    elif action.get('action') == 'close':
+        state = 'closed'
+    elif action.get('action') == 'pause':
+        state = 'paused'
+    else:
+        state = action.get('action')
+
+    owner_id = get_owner_id_by_name(owner_name)
+    if not owner_id: return
+
+    queues = get_queues(owner_name, queue_id=queue_id)
+    if not queues: return
+
+    queue_etcd_key = '/'.join([JESS_ETCD_ROOT,
+                              'owner.id:%s' % owner_id,
+                              'workflow.id:%s' % queues[0].get('workflow.id'),
+                              'workflow.ver:%s' % queues[0].get('workflow.ver'),
+                              'job_queue@job_queues/id:%s' % queue_id
+                              ])
+
+    succeeded, responses = etcd_client.transaction(
+        compare=[
+            etcd_client.transactions.value(queue_etcd_key) != state,
+            etcd_client.transactions.version(queue_etcd_key) > 0,  # test key exists
+        ],
+        success=[
+            etcd_client.transactions.put(queue_etcd_key, state)
+        ],
+        failure=[
+        ]
+    )
+
+    if not succeeded:
+        return
+    else:
+        return "Queue: %s is now '%s'" % (queue_id, state)

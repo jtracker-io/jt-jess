@@ -544,21 +544,12 @@ definitions:
   JobQueueAction:
     type: object
     required:
-      - name
+      - action
     properties:
-      id:
+      action:
         type: string
-        description: Workflow's unique identifier
-        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
-        readOnly: true
-      name:
-        type: string
-        description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
-        example: "BWA-MEM"
-        minLength: 3
-        maxLength: 35
+        description: Action on queue
+        enum: ["close", "open", "pause"]
   ExecutorAction:
     type: object
     required:
