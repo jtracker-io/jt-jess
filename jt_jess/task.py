@@ -8,6 +8,8 @@ from .job import get_jobs
 from .job import get_jobs_by_executor
 from .job import update_job_state
 
+from .queue import get_queues
+
 from .config import ETCD_HOST
 from .config import ETCD_PORT
 from .config import JESS_ETCD_ROOT
@@ -41,6 +43,15 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
 
     # let assume it's for running jobs by the same executor, this disables running the same job by
     # multiple executors, this advanced feature may need to be supported later
+
+    # if the client ask for task from queued jobs, will make sure queue is in 'open' state
+    if job_state == 'queued':
+        queues = get_queues(owner_name, queue_id=queue_id)
+        if queues:
+            if queues[0].get('state') != 'open':
+                return  ## not open, then not give new task from queued jobs
+        else:
+            return  # should never happen
 
     jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
 

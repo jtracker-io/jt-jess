@@ -209,8 +209,12 @@ def job_action(owner_name=None, queue_id=None, job_id=None, action=None):
         return 'Not implemented yet', 501
 
 
-def queue_action(owner_name):
-    pass
+def queue_action(owner_name, queue_id, action=None):
+    rv = queue.queue_action(owner_name=owner_name, queue_id=queue_id, action=action)
+    if rv:
+        return rv, 200
+    else:
+        return 'Queue action failed', 400
 
 
 def executor_action(owner_name, queue_id, executor_id):
