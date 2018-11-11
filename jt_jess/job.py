@@ -235,6 +235,10 @@ def enqueue_job(owner_name, queue_id, job_json):
 
         job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, job_json)
 
+        # TODO:
+        # job JSON should use the one from execution plan which may included addition parameter injected by the planner
+        # job_json = job_with_execution_plan.get('job_file')
+
         if job_with_execution_plan:
             job_json['id'] = str(uuid.uuid4())
             job_name = job_json['name'] if job_json.get('name') else '_unnamed'
@@ -551,7 +555,7 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
         # change tasks to 'queued' that are non-completed tasks for 'resume'
         # everything to 'queued' for 'reset'
         if new_state == 'queued' or \
-           new_state == 'resume' and job.get('tasks').get(t).get('state') != 'completed':
+                (new_state == 'resume' and job.get('tasks').get(t).get('state') != 'completed'):
             task_key = '/'.join([JESS_ETCD_ROOT,
                                  'job_queue.id:%s' % queue_id,
                                  'job.id:%s' % job.get('id'),
