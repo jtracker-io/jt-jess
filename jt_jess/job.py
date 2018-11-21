@@ -235,9 +235,8 @@ def enqueue_job(owner_name, queue_id, job_json):
 
         job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, job_json)
 
-        # TODO:
-        # job JSON should use the one from execution plan which may included addition parameter injected by the planner
-        # job_json = job_with_execution_plan.get('job_file')
+        tasks = job_with_execution_plan.pop('tasks')
+        job_json = job_with_execution_plan
 
         if job_with_execution_plan:
             job_json['id'] = str(uuid.uuid4())
@@ -245,7 +244,7 @@ def enqueue_job(owner_name, queue_id, job_json):
             # TODO: make this multiple key put operation transactional
             etcd_client.put('%s/job_queue.id:%s/job@jobs/state:queued/id:%s/name:%s/job_file' %
                             (JESS_ETCD_ROOT, queue_id, job_json['id'], job_name), value=json.dumps(job_json))
-            for task in job_with_execution_plan.pop('tasks'):
+            for task in tasks:
                 etcd_client.put('%s/job_queue.id:%s/job.id:%s/task@tasks/name:%s/state:queued/task_file' %
                                 (JESS_ETCD_ROOT, queue_id, job_json['id'], task['task']), value=json.dumps(task))
 
@@ -542,10 +541,17 @@ def reset_job(owner_name, queue_id, job_id, new_state='queued', executor_id=None
     else:
         return   # need better exception handle
 
-    job_with_execution_plan = get_job_execution_plan(workflow_owner, workflow_name, workflow_version, json.loads(job_etcd_value))
+    job_with_execution_plan = get_job_execution_plan(workflow_owner,
+                                                     workflow_name,
+                                                     workflow_version,
+                                                     json.loads(job_etcd_value))
+    tasks = job_with_execution_plan.pop('tasks')
+
+    # TODO: (not very sure about this) we also need to reset the job_file, need to update existing job_file in etcd
+    # job_file = job_with_execution_plan
 
     task_original_input = {}
-    for t in job_with_execution_plan.get('tasks'):
+    for t in tasks:
         task_name = t.get('task')
         task_input = t.get('input')
         task_original_input[task_name] = task_input
