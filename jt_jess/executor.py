@@ -79,7 +79,7 @@ def get_executors(owner_name, queue_id=None, node_id=None):
     rv = etcd_client.get_prefix(key_prefix=key_prefix)
     for value, meta in rv:
         k = meta.key.decode('utf-8').replace(JESS_ETCD_ROOT, '', 1)
-        k = '%s:%s' % (k, value.decode("utf-8"))  # join key and value with a ':'
+        k = k + value.decode("utf-8")  # join key and value with a ':'
 
         executor = {}
         for token in k.split('/'):
