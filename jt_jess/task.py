@@ -171,6 +171,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
                         etcd_client.transactions.put(new_job_etcd_key, job_file),
                         etcd_client.transactions.delete(job_etcd_key),
                         etcd_client.transactions.put(new_task_etcd_key, task_file),
+                        etcd_client.transactions.delete(exec_job_etcd_key_resume),  # delete the resume key if exists
                         etcd_client.transactions.delete(task_etcd_key),
                     ],
                     failure=[]
