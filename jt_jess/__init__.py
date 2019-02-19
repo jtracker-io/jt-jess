@@ -60,9 +60,9 @@ def get_executor1(owner_name, executor_id):
     return get_executors(owner_name, executor_id=executor_id)
 
 
-def register_executor(owner_name, queue_id, node_id):
+def register_executor(owner_name, queue_id, node_id, node_info=None):
     try:
-        rv = exe.register_executor(owner_name, queue_id, node_id)
+        rv = exe.register_executor(owner_name, queue_id, node_id, node_info)
         return rv, 200
     except Exception as e:
         return str(e), 400

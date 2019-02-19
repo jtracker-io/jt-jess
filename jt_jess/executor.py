@@ -14,7 +14,12 @@ etcd_client = etcd3.client(host=ETCD_HOST, port=ETCD_PORT,
            user=None, password=None)
 
 
-def register_executor(owner_name, queue_id, node_id):
+def register_executor(owner_name, queue_id, node_id, node_info=None):
+    if node_info is None:
+        node_ip = ''
+    else:
+        node_ip = node_info.get('node_ip', '')
+
     owner_id = get_owner_id_by_name(owner_name)
     if owner_id:
         r0 = etcd_client.get('/'.join([JESS_ETCD_ROOT,
@@ -36,13 +41,20 @@ def register_executor(owner_name, queue_id, node_id):
         ],
         success=[],  # do nothing
         failure=[
-            etcd_client.transactions.put(key, str(uuid.uuid4()))  # assign new UUID for new executor
+            # assign new UUID for new executor
+            etcd_client.transactions.put(key, '%s/node_ip:%s' % (str(uuid.uuid4()), node_ip))
         ]
     )
 
     r0 = etcd_client.get(key)
     if r0 and r0[0]:
-        return {'id': r0[0].decode('utf-8')}
+        items = r0[0].decode('utf-8').split('/')
+        executor = {'id': items[0]}
+        for item in items[1:]:
+            k, v = item.split(':')
+            executor[k] = v
+
+        return executor
     else:
         raise Exception('Registering executor failed')
 
@@ -67,19 +79,14 @@ def get_executors(owner_name, queue_id=None, node_id=None):
     rv = etcd_client.get_prefix(key_prefix=key_prefix)
     for value, meta in rv:
         k = meta.key.decode('utf-8').replace(JESS_ETCD_ROOT, '', 1)
-        try:
-            v = value.decode("utf-8")
-        except:
-            v = None  # assume binary value, deal with it later
+        k = '%s:%s' % (k, value.decode("utf-8"))  # join key and value with a ':'
 
         executor = {}
         for token in k.split('/'):
             if ':' not in token:
                 continue
             k1, v1 = token.split(':')
-            if k1 == 'id' and v1 == '':
-                v1 = v
-            elif k1.endswith('.id'):
+            if k1.endswith('.id'):
                 k1 = k1.replace('.', '_')
             executor[k1] = v1
 

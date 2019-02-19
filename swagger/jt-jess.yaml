@@ -256,6 +256,11 @@ paths:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
         - $ref: '#/parameters/node_id'
+        - name: node_info
+          required: false
+          in: body
+          schema:
+            type: object
       responses:
         200:
           description: Executor registered
