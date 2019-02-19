@@ -1,7 +1,7 @@
 from . import job, queue, executor as exe, task
 from .exceptions import OwnerNameNotFound, AMSNotAvailable, WorklowNotFound, WRSNotAvailable, QueueCreationFailure
 
-__version__ = '0.2.0a21'
+__version__ = '0.2.0a22'
 
 
 def get_jobs(owner_name, queue_id, job_id=None, state=None):
