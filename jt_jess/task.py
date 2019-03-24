@@ -10,6 +10,8 @@ from .job import update_job_state
 
 from .queue import get_queues
 
+from .executor import get_executors
+
 from .config import ETCD_HOST
 from .config import ETCD_PORT
 from .config import JESS_ETCD_ROOT
@@ -36,8 +38,14 @@ def has_next_task(owner_name, queue_id, executor_id):
 
 
 def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
-    # TODO: verify executor already registered under the job queue
-    #       get endpoint for executor has not implemented yet
+    executors = get_executors(owner_name=owner_name,
+                              queue_id=queue_id,
+                              executor_id=executor_id)
+
+    if not executors:
+        return  # should never happen, executor must have already register
+
+    job_pattern = executors[0].get('job_pattern')
 
     # find candidate job(s)
 
@@ -53,7 +61,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
         else:
             return  # should never happen
 
-    jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state)
+    jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state, job_pattern=job_pattern)
 
     # jobs run by the current executor
     if job_state == 'running':

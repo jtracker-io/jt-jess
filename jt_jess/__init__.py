@@ -60,6 +60,17 @@ def get_executor1(owner_name, executor_id):
     return get_executors(owner_name, executor_id=executor_id)
 
 
+def update_executor(owner_name, queue_id=None, executor_id=None, action=None):
+    try:
+        rv = exe.update_executor(owner_name,
+                                 queue_id=queue_id,
+                                 executor_id=executor_id,
+                                 action=action)
+        return rv, 202
+    except Exception as e:
+        return str(e), 400
+
+
 def register_executor(owner_name, queue_id, node_id, node_info=None):
     try:
         rv = exe.register_executor(owner_name, queue_id, node_id, node_info)
