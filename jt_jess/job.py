@@ -99,7 +99,7 @@ def delete_job(owner_name, queue_id, job_id):
         return
 
 
-def get_jobs(owner_name, queue_id, job_id=None, state=None, job_pattern=None):
+def get_jobs(owner_name, queue_id, job_id=None, state=None, job_selector=None):
     # TODO: have to make it very efficient to find job by ID, can't query all jobs from ETCD then filter the hits
     #       maybe we can search one job state at a time to get the job with supplied id
     # Job ETCD key eg: /jt:jess/job_queue.id:{queue_id}/job@jobs/state:queued/id:{job_id}
@@ -148,10 +148,10 @@ def get_jobs(owner_name, queue_id, job_id=None, state=None, job_pattern=None):
             if job_id is not None and job_id != job.get('id'):  # if job_id specified
                 continue
 
-            # job pattern specified but no match
-            if job_pattern and \
-                    not re.match(re.compile(r"%s" % job_pattern), job['id']) and \
-                    not re.match(re.compile(r"%s" % job_pattern), job['name']):
+            # job selector specified but no match
+            if job_selector and \
+                    not re.match(re.compile(r"%s" % job_selector), job['id']) and \
+                    not re.match(re.compile(r"%s" % job_selector), job['name']):
                 continue
 
             tasks = get_tasks_by_job_id(queue_id, job['id'])

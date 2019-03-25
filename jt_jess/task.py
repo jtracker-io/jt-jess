@@ -45,7 +45,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
     if not executors:
         return  # should never happen, executor must have already register
 
-    job_pattern = executors[0].get('job_pattern')
+    job_selector = executors[0].get('job_selector')
 
     # find candidate job(s)
 
@@ -61,7 +61,7 @@ def next_task(owner_name, queue_id, executor_id, job_id, job_state='running'):
         else:
             return  # should never happen
 
-    jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state, job_pattern=job_pattern)
+    jobs = get_jobs(owner_name, queue_id, job_id=job_id, state=job_state, job_selector=job_selector)
 
     # jobs run by the current executor
     if job_state == 'running':

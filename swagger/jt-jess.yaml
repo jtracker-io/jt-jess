@@ -558,7 +558,7 @@ definitions:
   ExecutorAction:
     type: object
     properties:
-      job_pattern:
+      job_selector:
         type: string
         pattern: "[a-zA-Z0-9-_.|]+"
         description: Body of the action expressed in string

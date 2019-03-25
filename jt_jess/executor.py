@@ -1,4 +1,5 @@
 import uuid
+import re
 import json
 import etcd3
 from .jt_services import get_owner_id_by_name
@@ -102,14 +103,16 @@ def update_executor(owner_name, queue_id=None, executor_id=None, action=None):
     if action is None:
         action = {}
 
-    # preprocess job_pattern if exists
-    if 'job_pattern' in action:
+    # preprocess job_selector if exists
+    if 'job_selector' in action:
         parts = []
-        for part in action['job_pattern'].split(','):
+        for part in action['job_selector'].split(','):
             part = part.replace('.', '\.')
-            parts.append('(\\b%s\\b)' % part)
+            selector = '(.*\\b%s\\b.*)' % part
+            re.compile(r'%s' % selector)  # make sure the selector is legitimate
+            parts.append(selector)
 
-        action['job_pattern'] = '|'.join(parts)
+        action['job_selector'] = '|'.join(parts)
 
     # let's get the executor first
     executors = get_executors(owner_name, queue_id=queue_id, executor_id=executor_id)
@@ -123,12 +126,12 @@ def update_executor(owner_name, queue_id=None, executor_id=None, action=None):
     values = r0[0].decode("utf-8").split('/')
 
     for i in range(len(values)):  # update values
-        if values[i].startswith('job_pattern:') and 'job_pattern' in action:
-            values[i] = 'job_pattern:%s' % action.pop('job_pattern')
+        if values[i].startswith('job_selector:') and 'job_selector' in action:
+            values[i] = 'job_selector:%s' % action.pop('job_selector')
 
     for i in action:  # dict is not empty yet, these are new key(s) previously did not exist
-        if i == 'job_pattern':
-            values.append('job_pattern:%s' % action[i])
+        if i == 'job_selector':
+            values.append('job_selector:%s' % action[i])
 
     new_value = '/'.join(values)
 
