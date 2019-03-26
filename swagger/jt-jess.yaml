@@ -283,8 +283,8 @@ paths:
   /executors/owner/{owner_name}/queue/{queue_id}/executor/{executor_id}/action:
     put:
       tags: [Executors]
-      operationId: jt_jess.executor_action
-      summary: Perform an action on a executor, eg, pause, resume (not implemented yet)
+      operationId: jt_jess.update_executor
+      summary: Perform an action on an executor, eg, pause, resume, set job selector etc
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -506,17 +506,16 @@ definitions:
     properties:
       id:
         type: string
-        description: Workflow's unique identifier
+        description: Job's unique identifier
         pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
         readOnly: true
       name:
         type: string
-        description: Workflow's name
-        pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,63}$"
-        example: "BWA-MEM"
+        description: Job's name, max length 128 characters
+        pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,127}$"
         minLength: 3
-        maxLength: 64
+        maxLength: 128
   TaskFile:
     type: object
     required:
@@ -530,9 +529,8 @@ definitions:
         readOnly: true
       name:
         type: string
-        description: Workflow's name
+        description: Task's name
         pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,255}$"
-        example: "BWA-MEM"
         minLength: 3
         maxLength: 256
   Executor:
@@ -557,22 +555,11 @@ definitions:
         enum: ["close", "open", "pause"]
   ExecutorAction:
     type: object
-    required:
-      - name
     properties:
-      id:
+      job_selector:
         type: string
-        description: Workflow's unique identifier
-        pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        example: "7ebf7fa9-f70f-481a-a499-5fba3f8c5078"
-        readOnly: true
-      name:
-        type: string
-        description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
-        example: "BWA-MEM"
-        minLength: 3
-        maxLength: 35
+        pattern: "[a-zA-Z0-9-_.,]*"
+        description: Body of the action expressed in string
   JobAction:
     type: object
     required:
@@ -608,10 +595,10 @@ definitions:
       name:
         type: string
         description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        pattern: "^[a-zA-Z0-9-_]{3,64}$"
         example: "BWA-MEM"
         minLength: 3
-        maxLength: 35
+        maxLength: 64
 
 securityDefinitions:
   oauth2:
