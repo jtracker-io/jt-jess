@@ -284,7 +284,7 @@ paths:
     put:
       tags: [Executors]
       operationId: jt_jess.update_executor
-      summary: Perform an action on a executor, eg, pause, resume (not implemented yet)
+      summary: Perform an action on an executor, eg, pause, resume, set job selector etc
       parameters:
         - $ref: '#/parameters/owner_name'
         - $ref: '#/parameters/queue_id'
@@ -514,7 +514,6 @@ definitions:
         type: string
         description: Job's name, max length 128 characters
         pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,127}$"
-        example: "BWA-MEM"
         minLength: 3
         maxLength: 128
   TaskFile:
@@ -530,9 +529,8 @@ definitions:
         readOnly: true
       name:
         type: string
-        description: Workflow's name
+        description: Task's name
         pattern: "^[a-zA-Z0-9]{1}[a-zA-Z0-9-_.]{2,255}$"
-        example: "BWA-MEM"
         minLength: 3
         maxLength: 256
   Executor:
@@ -560,7 +558,7 @@ definitions:
     properties:
       job_selector:
         type: string
-        pattern: "[a-zA-Z0-9-_.|]+"
+        pattern: "[a-zA-Z0-9-_.,]*"
         description: Body of the action expressed in string
   JobAction:
     type: object
@@ -597,10 +595,10 @@ definitions:
       name:
         type: string
         description: Workflow's name
-        pattern: "^[a-zA-Z0-9-_]{3,35}$"
+        pattern: "^[a-zA-Z0-9-_]{3,64}$"
         example: "BWA-MEM"
         minLength: 3
-        maxLength: 35
+        maxLength: 64
 
 securityDefinitions:
   oauth2:

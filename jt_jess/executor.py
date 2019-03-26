@@ -108,8 +108,11 @@ def update_executor(owner_name, queue_id=None, executor_id=None, action=None):
         parts = []
         for part in action['job_selector'].split(','):
             part = part.replace('.', '\.')
-            selector = '(.*\\b%s\\b.*)' % part
-            re.compile(r'%s' % selector)  # make sure the selector is legitimate
+            selector = '(.*\\b%s\\b.*)' % part if len(part) > 0 else ''
+            try:
+                re.compile(r'%s' % selector)  # make sure the selector is legitimate
+            except Exception:
+                raise Exception('Illegal character in selector, only allows: [0-9a-zA-Z._-,]')
             parts.append(selector)
 
         action['job_selector'] = '|'.join(parts)
