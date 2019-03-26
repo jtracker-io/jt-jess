@@ -10,7 +10,7 @@ MAINTAINER Junjun Zhang <junjun.ca@gmail.com>
 
 USER root
 
-RUN wget -O tmp.tar.gz -t 10 https://github.com/jtracker-io/jt-jess/archive/0.2.0a22.tar.gz && \
+RUN wget -O tmp.tar.gz -t 10 https://github.com/jtracker-io/jt-jess/archive/0.2.0a23.tar.gz && \
     mkdir -p /srv/jt-jess && \
     tar -C /srv/jt-jess --strip-components 1 -zxf tmp.tar.gz && \
     pip3 install -r /srv/jt-jess/requirements.txt
