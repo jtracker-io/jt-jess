@@ -265,27 +265,41 @@ def _populate_task_input_params(job, task_file):
     # iterate through parent tasks
     for key in task.get('input', {}):  # a task may not have input
         value = task.get('input').get(key)
-        if not isinstance(value, str):
-            continue
+        if isinstance(value, list):
+            values = value
+        else:
+            values = [value]
 
-        m = re.search(r"{{([\w.]+)@([\w.]+)}}", value)
-        if m:
-            pkey = m.group(1)  # parent output key
-            ptask = m.group(2)  # parent task name, TODO: for 'gather' task, this will refer to multiple tasks
+        new_values = []
+        for v in values:
+            if not isinstance(v, str):
+                new_values.append(v)
+                continue
 
-            ptask_file_str = job.get('tasks').get(ptask, {}).get('task_file', '{}')
-            ptask_output = json.loads(ptask_file_str).get('output', [])
-            if ptask_output:
-                # get the last output since a task may have run multiple times
-                if pkey in ptask_output[-1]:
-                    new_value = ptask_output[-1].get(pkey)  # handle 'gather' task later
-                else:
-                    raise ParentTaskError("Parent task '%s' in job '%s' misses output parameter '%s'" % (
-                        ptask, job.get('id'), pkey
-                    ))
-            else:  # this should never happens
-                raise ParentTaskError("Parent task '%s' in job '%s' misses output" % (ptask, job.get('id')))
+            m = re.search(r"{{([\w.]+)@([\w.]+)}}", v)
+            if m:
+                pkey = m.group(1)  # parent output key
+                ptask = m.group(2)  # parent task name, TODO: for 'gather' task, this will refer to multiple tasks
 
-            task['input'][key] = new_value
+                ptask_file_str = job.get('tasks').get(ptask, {}).get('task_file', '{}')
+                ptask_output = json.loads(ptask_file_str).get('output', [])
+                if ptask_output:
+                    # get the last output since a task may have run multiple times
+                    if pkey in ptask_output[-1]:
+                        new_value = ptask_output[-1].get(pkey)  # handle 'gather' task later
+                    else:
+                        raise ParentTaskError("Parent task '%s' in job '%s' misses output parameter '%s'" % (
+                            ptask, job.get('id'), pkey
+                        ))
+                else:  # this should never happens
+                    raise ParentTaskError("Parent task '%s' in job '%s' misses output" % (ptask, job.get('id')))
+                new_values.append(new_value)
+            else:
+                new_values.append(v)
+
+        if isinstance(task['input'][key], list):
+            task['input'][key] = new_values
+        else:
+            task['input'][key] = new_values[0]
 
     return json.dumps(task)
